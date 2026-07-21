@@ -1,0 +1,1429 @@
+(() => {
+  "use strict";
+
+  const STORAGE_KEY = "value-scanner-guided-dcf-v1";
+  const SNAPSHOT_KEY = "value-scanner-dcf-snapshots-v1";
+  const TOTAL_QUESTIONS = 15;
+  const RESULT_STEP = TOTAL_QUESTIONS;
+  const WACC_API = "http://localhost:3001/api/wacc";
+
+  const groups = [
+    { label: "기준정보", start: 0, end: 3 },
+    { label: "영업예측", start: 3, end: 7 },
+    { label: "재투자", start: 7, end: 11 },
+    { label: "영구가치", start: 11, end: 14 },
+    { label: "최종검토", start: 14, end: 15 },
+  ];
+
+  const evidenceKeys = [
+    "wacc",
+    "revenue",
+    "revenueGrowth",
+    "ebitMargin",
+    "taxRate",
+    "depreciationRate",
+    "capexRate",
+    "nwcRate",
+    "terminalGrowth",
+  ];
+
+  const today = () => {
+    const date = new Date();
+    const pad = (value) => String(value).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  };
+
+  const createDefaultState = () => ({
+    step: 0,
+    purpose: "internal",
+    valuationDate: today(),
+    wacc: 10,
+    waccSnapshot: null,
+    forecastYears: 5,
+    revenue: 1000,
+    revenueGrowth: 5,
+    ebitMargin: 10,
+    taxRate: 25,
+    depreciationRate: 5,
+    capexRate: 5,
+    nwcRate: 10,
+    terminalBasis: "nominal-gdp",
+    terminalGrowth: 2,
+    evidence: {},
+    lastVersion: null,
+  });
+
+  const escapeHtml = (value) =>
+    String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+
+  const finiteNumber = (value) => {
+    if (value === "" || value === null || value === undefined) return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  };
+
+  const loadState = () => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+      if (!saved || typeof saved !== "object") return createDefaultState();
+      const merged = { ...createDefaultState(), ...saved };
+      merged.evidence = saved.evidence && typeof saved.evidence === "object" ? saved.evidence : {};
+      merged.step = Math.min(Math.max(Number(saved.step) || 0, 0), RESULT_STEP);
+      return merged;
+    } catch {
+      return createDefaultState();
+    }
+  };
+
+  let state = loadState();
+  let guidedRoot = null;
+  let savedWaccRows = [];
+  let waccLoadStarted = false;
+  let syncQueued = false;
+
+  const saveState = () => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      // The calculator remains usable when browser storage is unavailable.
+    }
+  };
+
+  const formatNumber = (value, maximumFractionDigits = 0) =>
+    new Intl.NumberFormat("ko-KR", { maximumFractionDigits }).format(Number(value) || 0);
+
+  const formatPercent = (value) => `${formatNumber(value, 2)}%`;
+
+  const purposeLabel = (purpose) =>
+    ({
+      internal: "내부 의사결정",
+      ias36: "IAS 36 사용가치",
+      ifrs13: "IFRS 13 공정가치",
+    })[purpose] || "내부 의사결정";
+
+  const terminalBasisLabel = (basis) =>
+    ({
+      "nominal-gdp": "명목 GDP 성장률",
+      inflation: "장기 물가상승률",
+      sustainable: "지속가능성장률",
+      riskfree: "무위험이자율 참고",
+      custom: "직접 입력",
+    })[basis] || "직접 입력";
+
+  const computeDcf = (overrides = {}) => {
+    const waccPercent = finiteNumber(overrides.wacc ?? state.wacc);
+    const terminalGrowthPercent = finiteNumber(
+      overrides.terminalGrowth ?? state.terminalGrowth,
+    );
+    const years = finiteNumber(state.forecastYears);
+    const baseRevenue = finiteNumber(state.revenue);
+    const growthPercent = finiteNumber(state.revenueGrowth);
+    const ebitMarginPercent = finiteNumber(state.ebitMargin);
+    const taxPercent = finiteNumber(state.taxRate);
+    const depreciationPercent = finiteNumber(state.depreciationRate);
+    const capexPercent = finiteNumber(state.capexRate);
+    const nwcPercent = finiteNumber(state.nwcRate);
+
+    if (
+      waccPercent === null ||
+      terminalGrowthPercent === null ||
+      years === null ||
+      !Number.isInteger(years) ||
+      years < 1 ||
+      baseRevenue === null ||
+      growthPercent === null ||
+      ebitMarginPercent === null ||
+      taxPercent === null ||
+      depreciationPercent === null ||
+      capexPercent === null ||
+      nwcPercent === null
+    ) {
+      return null;
+    }
+
+    const wacc = waccPercent / 100;
+    const terminalGrowth = terminalGrowthPercent / 100;
+    if (
+      wacc <= 0 ||
+      wacc >= 1 ||
+      terminalGrowth < 0 ||
+      terminalGrowth > 0.2 ||
+      wacc <= terminalGrowth
+    )
+      return null;
+
+    let previousRevenue = baseRevenue;
+    let previousNwc = baseRevenue * (nwcPercent / 100);
+    const cashFlows = [];
+
+    for (let year = 1; year <= years; year += 1) {
+      const revenue = previousRevenue * (1 + growthPercent / 100);
+      const ebit = revenue * (ebitMarginPercent / 100);
+      const nopat = ebit * (1 - taxPercent / 100);
+      const depreciation = revenue * (depreciationPercent / 100);
+      const capex = revenue * (capexPercent / 100);
+      const nwc = revenue * (nwcPercent / 100);
+      const changeNwc = nwc - previousNwc;
+      const fcff = nopat + depreciation - capex - changeNwc;
+      const discountFactor = (1 + wacc) ** year;
+      const presentValue = fcff / discountFactor;
+
+      cashFlows.push({
+        year,
+        revenue,
+        ebit,
+        nopat,
+        depreciation,
+        capex,
+        changeNwc,
+        fcff,
+        presentValue,
+      });
+
+      previousRevenue = revenue;
+      previousNwc = nwc;
+    }
+
+    const forecastPresentValue = cashFlows.reduce(
+      (sum, cashFlow) => sum + cashFlow.presentValue,
+      0,
+    );
+    const lastFcff = cashFlows.at(-1)?.fcff || 0;
+    const terminalFcff = lastFcff * (1 + terminalGrowth);
+    const terminalValue = terminalFcff / (wacc - terminalGrowth);
+    const terminalPresentValue = terminalValue / (1 + wacc) ** years;
+    const enterpriseValue = forecastPresentValue + terminalPresentValue;
+    const terminalShare = enterpriseValue
+      ? (terminalPresentValue / enterpriseValue) * 100
+      : 0;
+
+    return {
+      cashFlows,
+      forecastPresentValue,
+      terminalValue,
+      terminalPresentValue,
+      enterpriseValue,
+      terminalShare,
+      wacc: waccPercent,
+      terminalGrowth: terminalGrowthPercent,
+    };
+  };
+
+  const validateStep = (step) => {
+    const result = { error: "", warning: "" };
+    const number = (field) => finiteNumber(state[field]);
+
+    switch (step) {
+      case 0:
+        if (!state.purpose) result.error = "평가 목적을 선택해 주세요.";
+        break;
+      case 1:
+        if (!state.valuationDate) result.error = "평가 기준일을 입력해 주세요.";
+        else if (state.valuationDate > today())
+          result.warning = "평가 기준일이 오늘보다 미래입니다. 기준 자료의 시점을 다시 확인해 주세요.";
+        break;
+      case 2:
+        if (number("wacc") === null || number("wacc") <= 0 || number("wacc") >= 100)
+          result.error = "WACC은 0%보다 크고 100%보다 작아야 합니다.";
+        else if (number("wacc") < 3 || number("wacc") > 30)
+          result.warning = "일반적인 범위를 크게 벗어났습니다. 산출 근거를 꼭 남겨 주세요.";
+        break;
+      case 3:
+        if (
+          number("forecastYears") === null ||
+          !Number.isInteger(number("forecastYears")) ||
+          number("forecastYears") < 1 ||
+          number("forecastYears") > 20
+        )
+          result.error = "직접 예측기간은 1년에서 20년 사이의 정수로 입력해 주세요.";
+        else if (number("forecastYears") > 10)
+          result.warning = "10년을 초과한 상세 예측은 불확실성이 큽니다. 장기 예측의 근거를 확인해 주세요.";
+        break;
+      case 4:
+        if (number("revenue") === null || number("revenue") <= 0)
+          result.error = "기준연도 매출액은 0보다 커야 합니다.";
+        break;
+      case 5:
+        if (number("revenueGrowth") === null || number("revenueGrowth") <= -100)
+          result.error = "매출 성장률은 -100%보다 커야 합니다.";
+        else if (number("revenueGrowth") > 30)
+          result.warning = "높은 성장률입니다. 승인된 사업계획이나 수주잔고 등 근거를 확인해 주세요.";
+        break;
+      case 6:
+        if (
+          number("ebitMargin") === null ||
+          number("ebitMargin") < -100 ||
+          number("ebitMargin") > 100
+        )
+          result.error = "영업이익률은 -100%에서 100% 사이로 입력해 주세요.";
+        else if (number("ebitMargin") < 0)
+          result.warning = "적자 가정입니다. 흑자 전환 시점과 필요한 자금도 함께 검토해 주세요.";
+        break;
+      case 7:
+        if (
+          number("taxRate") === null ||
+          number("taxRate") < 0 ||
+          number("taxRate") > 100
+        )
+          result.error = "법인세율은 0%에서 100% 사이로 입력해 주세요.";
+        break;
+      case 8:
+        if (
+          number("depreciationRate") === null ||
+          number("depreciationRate") < 0 ||
+          number("depreciationRate") > 100
+        )
+          result.error = "감가상각비율은 0%에서 100% 사이로 입력해 주세요.";
+        break;
+      case 9:
+        if (
+          number("capexRate") === null ||
+          number("capexRate") < 0 ||
+          number("capexRate") > 200
+        )
+          result.error = "CAPEX 비율은 0%에서 200% 사이로 입력해 주세요.";
+        else if (number("capexRate") < number("depreciationRate"))
+          result.warning = "CAPEX가 감가상각비보다 낮습니다. 장기적으로 자산 유지가 가능한지 확인해 주세요.";
+        break;
+      case 10:
+        if (
+          number("nwcRate") === null ||
+          number("nwcRate") < -200 ||
+          number("nwcRate") > 200
+        )
+          result.error = "운전자본 비율은 -200%에서 200% 사이로 입력해 주세요.";
+        break;
+      case 12:
+        if (!state.terminalBasis) result.error = "영구성장률의 기준을 선택해 주세요.";
+        break;
+      case 13:
+        if (number("terminalGrowth") === null)
+          result.error = "영구성장률을 입력해 주세요.";
+        else if (number("terminalGrowth") < 0 || number("terminalGrowth") > 20)
+          result.error = "영구성장률은 0%에서 20% 사이로 입력해 주세요.";
+        else if (number("terminalGrowth") >= number("wacc"))
+          result.error = "영구성장률은 WACC보다 낮아야 합니다.";
+        else if (number("terminalGrowth") > 5)
+          result.warning = "장기 성장률이 높은 편입니다. 명목 GDP 또는 물가 장기전망과 비교해 주세요.";
+        break;
+      default:
+        break;
+    }
+
+    return result;
+  };
+
+  const allAssumptionsValid = () => {
+    for (let step = 0; step < TOTAL_QUESTIONS; step += 1) {
+      if (validateStep(step).error) return false;
+    }
+    return Boolean(computeDcf());
+  };
+
+  const readiness = () => {
+    const completed = evidenceKeys.filter((key) => String(state.evidence[key] || "").trim()).length;
+    return { completed, total: evidenceKeys.length, percent: Math.round((completed / evidenceKeys.length) * 100) };
+  };
+
+  const renderEvidence = (key, placeholder) => `
+    <details class="guided-evidence">
+      <summary>
+        <span>근거 자료 남기기</span>
+        <span class="guided-optional">선택</span>
+      </summary>
+      <label class="guided-evidence-label" for="evidence-${escapeHtml(key)}">
+        문서명·기준기간·페이지·판단 메모
+      </label>
+      <textarea
+        id="evidence-${escapeHtml(key)}"
+        data-evidence="${escapeHtml(key)}"
+        rows="3"
+        placeholder="${escapeHtml(placeholder)}"
+      >${escapeHtml(state.evidence[key] || "")}</textarea>
+    </details>
+  `;
+
+  const renderValidation = (step) => {
+    const { error, warning } = validateStep(step);
+    if (error) return `<div class="guided-message error" role="alert">${escapeHtml(error)}</div>`;
+    if (warning) return `<div class="guided-message warning">${escapeHtml(warning)}</div>`;
+    return '<div class="guided-message" aria-live="polite"></div>';
+  };
+
+  const renderWhereToFind = (title, body) => `
+    <details class="guided-help">
+      <summary>잘 모르겠어요</summary>
+      <div class="guided-help-body">
+        <strong>${escapeHtml(title)}</strong>
+        <p>${escapeHtml(body)}</p>
+      </div>
+    </details>
+  `;
+
+  const renderNumberQuestion = ({
+    step,
+    eyebrow,
+    question,
+    description,
+    field,
+    unit,
+    min,
+    max,
+    inputStep = "0.1",
+    helpTitle,
+    helpBody,
+    evidenceKey,
+    evidencePlaceholder,
+    readout = "",
+    quickValues = [],
+  }) => `
+    <section class="guided-question-card" aria-labelledby="guided-question-title">
+      <div class="guided-question-copy">
+        <span class="guided-eyebrow">${escapeHtml(eyebrow)}</span>
+        <h3 id="guided-question-title">${escapeHtml(question)}</h3>
+        <p>${escapeHtml(description)}</p>
+      </div>
+
+      <div class="guided-primary-input">
+        <div class="guided-input-wrap">
+          <input
+            id="guided-${escapeHtml(field)}"
+            data-field="${escapeHtml(field)}"
+            type="number"
+            inputmode="decimal"
+            value="${escapeHtml(state[field])}"
+            min="${escapeHtml(min)}"
+            max="${escapeHtml(max)}"
+           step="${escapeHtml(inputStep)}"
+            aria-labelledby="guided-question-title"
+            aria-describedby="guided-validation"
+          />
+          <span>${escapeHtml(unit)}</span>
+        </div>
+        ${readout ? `<div class="guided-readout" data-readout="${escapeHtml(field)}">${escapeHtml(readout)}</div>` : ""}
+      </div>
+
+      ${
+        quickValues.length
+          ? `<div class="guided-quick-values" aria-label="빠른 선택">
+              ${quickValues
+                .map(
+                  (value) => `
+                    <button type="button" data-set-field="${escapeHtml(field)}" data-set-value="${escapeHtml(value)}">
+                      ${escapeHtml(value)}${escapeHtml(unit)}
+                    </button>`,
+                )
+                .join("")}
+            </div>`
+          : ""
+      }
+
+      <div id="guided-validation" data-validation>
+        ${renderValidation(step)}
+      </div>
+
+      ${renderWhereToFind(helpTitle, helpBody)}
+      ${evidenceKey ? renderEvidence(evidenceKey, evidencePlaceholder) : ""}
+    </section>
+  `;
+
+  const renderPurposeStep = () => {
+    const options = [
+      {
+        value: "internal",
+        icon: "🧭",
+        title: "내부 의사결정",
+        description: "투자·경영 검토를 위한 일반적인 기업가치 분석",
+      },
+      {
+        value: "ias36",
+        icon: "📋",
+        title: "IAS 36 사용가치",
+        description: "손상검사 목적. 현금흐름과 할인율의 위험 일치가 중요",
+      },
+      {
+        value: "ifrs13",
+        icon: "⚖️",
+        title: "IFRS 13 공정가치",
+        description: "시장참여자 관점의 가정과 관측 가능한 자료를 우선",
+      },
+    ];
+
+    return `
+      <section class="guided-question-card" aria-labelledby="guided-question-title">
+        <div class="guided-question-copy">
+          <span class="guided-eyebrow">평가 기준</span>
+          <h3 id="guided-question-title">이번 DCF는 어떤 목적으로 계산하나요?</h3>
+          <p>목적에 따라 감사인이 확인하는 현금흐름과 할인율 기준이 달라집니다.</p>
+        </div>
+        <div class="guided-choice-grid purpose">
+          ${options
+            .map(
+              (option) => `
+                <button
+                  type="button"
+                  class="guided-choice ${state.purpose === option.value ? "selected" : ""}"
+                  data-purpose="${escapeHtml(option.value)}"
+                  aria-pressed="${state.purpose === option.value}"
+                >
+                  <span class="guided-choice-icon">${option.icon}</span>
+                  <span class="guided-choice-copy">
+                    <strong>${escapeHtml(option.title)}</strong>
+                    <small>${escapeHtml(option.description)}</small>
+                  </span>
+                </button>
+              `,
+            )
+            .join("")}
+        </div>
+        ${
+          state.purpose === "ias36"
+            ? `<div class="guided-message warning">현재 계산기는 세후 FCFF·WACC 방식입니다. IAS 36 보고 목적이라면 동일 현재가치를 만드는 세전 할인율과 위험 중복 여부를 별도로 검토하세요.</div>`
+            : ""
+        }
+        <div data-validation>${renderValidation(0)}</div>
+      </section>
+    `;
+  };
+
+  const renderDateStep = () => `
+    <section class="guided-question-card" aria-labelledby="guided-question-title">
+      <div class="guided-question-copy">
+        <span class="guided-eyebrow">평가 기준일</span>
+        <h3 id="guided-question-title">이번 평가의 기준일은 언제인가요?</h3>
+        <p>재무자료, 시장 데이터, WACC를 모두 이 날짜 기준으로 맞춰 주세요.</p>
+      </div>
+      <div class="guided-primary-input date">
+        <input
+          id="guided-valuationDate"
+          data-field="valuationDate"
+          type="date"
+          value="${escapeHtml(state.valuationDate)}"
+          aria-labelledby="guided-question-title"
+          aria-describedby="guided-validation"
+        />
+      </div>
+      <div id="guided-validation" data-validation>${renderValidation(1)}</div>
+      ${renderWhereToFind(
+        "어떤 날짜를 쓰나요?",
+        "결산 손상검사는 통상 결산일, 거래 목적 평가는 합의된 평가기준일을 사용합니다. 이후 발생한 사건은 별도로 구분해 기록하세요.",
+      )}
+    </section>
+  `;
+
+  const renderSavedWacc = () => {
+    if (!savedWaccRows.length) return "";
+    return `
+      <div class="guided-saved-wacc">
+        <span class="guided-field-label">저장된 WACC</span>
+        <div class="guided-wacc-list">
+          ${savedWaccRows
+            .map(
+              (row) => `
+                <button
+                  type="button"
+                  class="guided-wacc-option ${state.waccSnapshot?.id === row.id ? "selected" : ""}"
+                  data-wacc-id="${escapeHtml(row.id)}"
+                >
+                  <span>
+                    <strong>${escapeHtml(row.name)}</strong>
+                    <small>${escapeHtml(row.method === "regression" ? "회귀분석" : "업종 베타")}</small>
+                  </span>
+                  <b>${formatPercent(row.wacc)}</b>
+                </button>
+              `,
+            )
+            .join("")}
+        </div>
+      </div>
+    `;
+  };
+
+  const renderWaccStep = () => `
+    <section class="guided-question-card" aria-labelledby="guided-question-title">
+      <div class="guided-question-copy">
+        <span class="guided-eyebrow">할인율</span>
+        <h3 id="guided-question-title">미래 현금흐름을 몇 %로 할인할까요?</h3>
+        <p>앞에서 계산한 WACC이 있으면 선택하고, 없다면 근거와 함께 직접 입력하세요.</p>
+      </div>
+      ${renderSavedWacc()}
+      <div class="guided-primary-input">
+        <label class="guided-field-label" for="guided-wacc">WACC 직접 입력</label>
+        <div class="guided-input-wrap">
+          <input
+            id="guided-wacc"
+            data-field="wacc"
+            type="number"
+            inputmode="decimal"
+            value="${escapeHtml(state.wacc)}"
+            min="0.1"
+            max="99.9"
+            step="0.1"
+            aria-describedby="guided-validation"
+          />
+          <span>%</span>
+        </div>
+      </div>
+      <div id="guided-validation" data-validation>${renderValidation(2)}</div>
+      <div class="guided-audit-tip">
+        <span>감사 대응 팁</span>
+        <p>베타·무위험수익률·시장위험프리미엄·목표 자본구조의 기준일과 출처를 함께 보관하세요.</p>
+      </div>
+      ${renderWhereToFind(
+        "WACC은 어디서 가져오나요?",
+        "왼쪽의 WACC 산출 메뉴에서 비교기업 기반 베타와 자본구조를 사용해 계산할 수 있습니다. 현금흐름에 반영한 위험을 할인율에 다시 더하지 마세요.",
+      )}
+      ${renderEvidence("wacc", "예: 2026.07.20 Bloomberg 5Y Weekly adjusted beta, 비교기업 6개 중위값")}
+    </section>
+  `;
+
+  const renderFcffReview = () => {
+    const result = computeDcf();
+    if (!result) {
+      return `
+        <section class="guided-question-card">
+          <div class="guided-message error">입력값으로 현금흐름을 계산할 수 없습니다. 이전 가정을 다시 확인해 주세요.</div>
+        </section>
+      `;
+    }
+
+    return `
+      <section class="guided-question-card wide" aria-labelledby="guided-question-title">
+        <div class="guided-question-copy">
+          <span class="guided-eyebrow">중간 검토</span>
+          <h3 id="guided-question-title">예상 FCFF 흐름이 사업계획과 비슷한가요?</h3>
+          <p>매출에서 현금흐름까지의 연결을 확인하세요. 이상하면 해당 가정으로 바로 돌아갈 수 있습니다.</p>
+        </div>
+        <div class="guided-review-actions">
+          <button type="button" data-edit-step="4">매출 수정</button>
+          <button type="button" data-edit-step="5">성장률 수정</button>
+          <button type="button" data-edit-step="6">마진 수정</button>
+          <button type="button" data-edit-step="9">CAPEX 수정</button>
+          <button type="button" data-edit-step="10">NWC 수정</button>
+        </div>
+        <div class="guided-table-wrap">
+          <table class="guided-fcff-table">
+            <thead>
+              <tr>
+                <th>연도</th>
+                <th>매출액</th>
+                <th>EBIT</th>
+                <th>NOPAT</th>
+                <th>D&amp;A</th>
+                <th>CAPEX</th>
+                <th>ΔNWC</th>
+                <th>FCFF</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${result.cashFlows
+                .map(
+                  (cashFlow) => `
+                    <tr>
+                      <td>${cashFlow.year}년차</td>
+                      <td>${formatNumber(cashFlow.revenue)}</td>
+                      <td>${formatNumber(cashFlow.ebit)}</td>
+                      <td>${formatNumber(cashFlow.nopat)}</td>
+                      <td>${formatNumber(cashFlow.depreciation)}</td>
+                      <td>${formatNumber(cashFlow.capex)}</td>
+                      <td>${formatNumber(cashFlow.changeNwc)}</td>
+                      <td class="highlight">${formatNumber(cashFlow.fcff)}</td>
+                    </tr>
+                  `,
+                )
+                .join("")}
+            </tbody>
+          </table>
+        </div>
+        <div class="guided-message ${state.capexRate < state.depreciationRate ? "warning" : "success"}">
+          ${
+            state.capexRate < state.depreciationRate
+              ? "CAPEX가 감가상각비보다 낮습니다. 장기간 유지 가능한 가정인지 확인해 주세요."
+              : "FCFF 연결표가 완성됐습니다. 사업계획과 일치하면 다음으로 진행하세요."
+          }
+        </div>
+      </section>
+    `;
+  };
+
+  const renderTerminalBasisStep = () => {
+    const options = [
+      ["nominal-gdp", "명목 GDP", "명목 현금흐름과 비교하기 쉬운 장기 경제성장 기준"],
+      ["inflation", "장기 물가", "실질 성장이 제한적인 안정 사업에 적합"],
+      ["sustainable", "지속가능성장률", "ROE와 유보율 등 기업 펀더멘털 기준"],
+      ["riskfree", "무위험이자율 참고", "통화와 만기가 일치하는 장기 금리 참고"],
+      ["custom", "직접 입력", "산업 전망 등 별도 근거가 있는 경우"],
+    ];
+
+    return `
+      <section class="guided-question-card" aria-labelledby="guided-question-title">
+        <div class="guided-question-copy">
+          <span class="guided-eyebrow">영구가치 기준</span>
+          <h3 id="guided-question-title">예측기간 이후 성장률은 어떤 기준으로 정할까요?</h3>
+          <p>자동 제안값이 아니라, 선택한 기준의 최신 전망치를 다음 단계에서 직접 확인합니다.</p>
+        </div>
+        <div class="guided-choice-grid terminal">
+          ${options
+            .map(
+              ([value, title, description]) => `
+                <button
+                  type="button"
+                  class="guided-choice ${state.terminalBasis === value ? "selected" : ""}"
+                  data-terminal-basis="${escapeHtml(value)}"
+                  aria-pressed="${state.terminalBasis === value}"
+                >
+                  <span class="guided-choice-copy">
+                    <strong>${escapeHtml(title)}</strong>
+                    <small>${escapeHtml(description)}</small>
+                  </span>
+                </button>
+              `,
+            )
+            .join("")}
+        </div>
+        <div data-validation>${renderValidation(12)}</div>
+      </section>
+    `;
+  };
+
+  const assumptionRows = () => [
+    ["평가 목적", purposeLabel(state.purpose), 0],
+    ["평가 기준일", state.valuationDate, 1],
+    ["WACC", formatPercent(state.wacc), 2],
+    ["상세 예측기간", `${formatNumber(state.forecastYears)}년`, 3],
+    ["기준연도 매출", `${formatNumber(state.revenue)}억원`, 4],
+    ["연평균 매출 성장률", formatPercent(state.revenueGrowth), 5],
+    ["EBIT Margin", formatPercent(state.ebitMargin), 6],
+    ["법인세율", formatPercent(state.taxRate), 7],
+    ["D&A / 매출", formatPercent(state.depreciationRate), 8],
+    ["CAPEX / 매출", formatPercent(state.capexRate), 9],
+    ["NWC / 매출", formatPercent(state.nwcRate), 10],
+    ["영구성장 기준", terminalBasisLabel(state.terminalBasis), 12],
+    ["영구성장률", formatPercent(state.terminalGrowth), 13],
+  ];
+
+  const renderFinalReview = () => {
+    const auditReadiness = readiness();
+    const valid = allAssumptionsValid();
+
+    return `
+      <section class="guided-question-card wide" aria-labelledby="guided-question-title">
+        <div class="guided-question-copy">
+          <span class="guided-eyebrow">최종 검토</span>
+          <h3 id="guided-question-title">이 가정으로 DCF를 계산할까요?</h3>
+          <p>숫자보다 먼저 기준일, 출처, 현금흐름과 할인율의 일관성을 확인하세요.</p>
+        </div>
+        <div class="guided-readiness">
+          <div>
+            <span>감사 준비도</span>
+            <strong>${auditReadiness.completed}/${auditReadiness.total}</strong>
+          </div>
+          <div class="guided-readiness-track">
+            <span style="width:${auditReadiness.percent}%"></span>
+          </div>
+          <small>핵심 가정에 근거 메모를 남긴 수입니다. 감사 승인 여부를 의미하지 않습니다.</small>
+        </div>
+        <div class="guided-assumption-list">
+          ${assumptionRows()
+            .map(
+              ([label, value, step]) => `
+                <div class="guided-assumption-row">
+                  <span>${escapeHtml(label)}</span>
+                  <strong>${escapeHtml(value)}</strong>
+                  <button type="button" data-edit-step="${step}">수정</button>
+                </div>
+              `,
+            )
+            .join("")}
+        </div>
+        <div data-validation>
+          ${
+            valid
+              ? '<div class="guided-message success">계산 준비가 완료됐습니다.</div>'
+              : '<div class="guided-message error">일부 가정이 유효하지 않습니다. 표시된 항목을 수정해 주세요.</div>'
+          }
+        </div>
+      </section>
+    `;
+  };
+
+  const renderSensitivity = (result) => {
+    const waccOffsets = [-1, 0, 1];
+    const growthOffsets = [-0.5, 0, 0.5];
+    return `
+      <div class="guided-sensitivity">
+        <h4>민감도 분석 <small>(기업가치, 억원)</small></h4>
+        <div class="guided-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>WACC \ g</th>
+                ${growthOffsets
+                  .map((offset) => `<th>${formatPercent(result.terminalGrowth + offset)}</th>`)
+                  .join("")}
+              </tr>
+            </thead>
+            <tbody>
+              ${waccOffsets
+                .map(
+                  (waccOffset) => `
+                    <tr>
+                      <th>${formatPercent(result.wacc + waccOffset)}</th>
+                      ${growthOffsets
+                        .map((growthOffset) => {
+                          const scenario = computeDcf({
+                            wacc: result.wacc + waccOffset,
+                            terminalGrowth: result.terminalGrowth + growthOffset,
+                          });
+                          return `<td class="${waccOffset === 0 && growthOffset === 0 ? "base" : ""}">${
+                            scenario ? formatNumber(scenario.enterpriseValue) : "-"
+                          }</td>`;
+                        })
+                        .join("")}
+                    </tr>
+                  `,
+                )
+                .join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  };
+
+  const renderResult = () => {
+    const result = computeDcf();
+    if (!result) {
+      return `
+        <section class="guided-question-card">
+          <div class="guided-message error">결과를 계산할 수 없습니다. WACC과 영구성장률을 다시 확인해 주세요.</div>
+        </section>
+      `;
+    }
+
+    return `
+      <section class="guided-result" aria-labelledby="guided-result-title">
+        <div class="guided-result-hero">
+          <div>
+            <span class="guided-eyebrow">DCF 결과 · 버전 ${escapeHtml(state.lastVersion || 1)}</span>
+            <h3 id="guided-result-title">추정 기업가치</h3>
+            <strong>${formatNumber(result.enterpriseValue)}<small>억원</small></strong>
+            <p>${escapeHtml(purposeLabel(state.purpose))} · 기준일 ${escapeHtml(state.valuationDate)}</p>
+          </div>
+          <div class="guided-result-badge">WACC ${formatPercent(result.wacc)}</div>
+        </div>
+
+        <div class="guided-result-grid">
+          <article>
+            <span>예측기간 현재가치</span>
+            <strong>${formatNumber(result.forecastPresentValue)}</strong>
+            <small>억원</small>
+          </article>
+          <article>
+            <span>영구가치 현재가치</span>
+            <strong>${formatNumber(result.terminalPresentValue)}</strong>
+            <small>억원</small>
+          </article>
+          <article>
+            <span>영구가치 비중</span>
+            <strong>${formatNumber(result.terminalShare, 1)}%</strong>
+            <small>${result.terminalShare > 75 ? "가정 민감도 확인 필요" : "일반 검토 범위"}</small>
+          </article>
+        </div>
+
+        ${
+          result.terminalShare > 75
+            ? '<div class="guided-message warning">기업가치의 75% 이상이 영구가치에서 나옵니다. WACC과 영구성장률 민감도를 중점 검토하세요.</div>'
+            : '<div class="guided-message success">상세 예측기간과 영구가치의 연결이 계산됐습니다.</div>'
+        }
+
+        <div class="guided-table-wrap result-table">
+          <table class="guided-fcff-table">
+            <thead>
+              <tr>
+                <th>연도</th>
+                <th>매출액</th>
+                <th>FCFF</th>
+                <th>FCFF 현재가치</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${result.cashFlows
+                .map(
+                  (cashFlow) => `
+                    <tr>
+                      <td>${cashFlow.year}년차</td>
+                      <td>${formatNumber(cashFlow.revenue)}</td>
+                      <td>${formatNumber(cashFlow.fcff)}</td>
+                      <td class="highlight">${formatNumber(cashFlow.presentValue)}</td>
+                    </tr>
+                  `,
+                )
+                .join("")}
+            </tbody>
+          </table>
+        </div>
+
+        ${renderSensitivity(result)}
+
+        <div class="guided-result-note">
+          <strong>감사 검토용 체크</strong>
+          <p>전기 예측 대비 실제 실적, 비교기업·WACC 기준일, 영구성장률 근거, 현금흐름과 할인율의 위험 중복을 별도 확인하세요.</p>
+        </div>
+
+        <div class="guided-result-actions">
+          <button type="button" class="secondary" data-action="back-to-review">가정 다시 검토</button>
+          <button type="button" class="primary" data-action="new-analysis">새 분석 시작</button>
+        </div>
+      </section>
+    `;
+  };
+
+  const renderStepContent = () => {
+    switch (state.step) {
+      case 0:
+        return renderPurposeStep();
+      case 1:
+        return renderDateStep();
+      case 2:
+        return renderWaccStep();
+      case 3:
+        return renderNumberQuestion({
+          step: 3,
+          eyebrow: "예측기간",
+          question: "몇 년간 현금흐름을 직접 예측할까요?",
+          description: "사업계획이 구체적으로 승인된 기간까지만 상세 예측하는 것이 좋습니다.",
+          field: "forecastYears",
+          unit: "년",
+          min: 1,
+          max: 20,
+          inputStep: 1,
+          quickValues: [5, 7, 10],
+          helpTitle: "보통 몇 년을 쓰나요?",
+          helpBody: "안정적인 사업은 5년이 흔합니다. 정상화나 대규모 투자기간이 더 길면 7~10년을 사용할 수 있지만 추가 근거가 필요합니다.",
+        });
+      case 4:
+        return renderNumberQuestion({
+          step: 4,
+          eyebrow: "기준 매출",
+          question: "기준연도 매출액은 얼마인가요?",
+          description: "가장 최근 확정 결산 또는 평가기준일에 가까운 신뢰할 수 있는 실적을 입력하세요.",
+          field: "revenue",
+          unit: "억원",
+          min: 0,
+          max: 1e12,
+          inputStep: 1,
+          readout: `${formatNumber(state.revenue)}억원으로 입력됐어요`,
+          helpTitle: "어디서 찾나요?",
+          helpBody: "감사받은 손익계산서의 매출액을 우선 사용합니다. 최근 인수나 중단사업이 있으면 비교 가능한 기준으로 조정하고 근거를 남기세요.",
+          evidenceKey: "revenue",
+          evidencePlaceholder: "예: 2025년 감사보고서 연결 손익계산서 p.42, 매출 1,250억원",
+        });
+      case 5:
+        return renderNumberQuestion({
+          step: 5,
+          eyebrow: "매출 성장",
+          question: "앞으로 매출은 매년 얼마나 성장할까요?",
+          description: "현재 버전은 연평균 성장률을 적용합니다. 승인된 사업계획의 연도별 성장과 크게 다르지 않은지 확인하세요.",
+          field: "revenueGrowth",
+          unit: "%",
+          min: -99.9,
+          max: 200,
+          helpTitle: "무엇을 근거로 하나요?",
+          helpBody: "수주잔고, 생산능력, 가격·물량 계획, 시장성장률과 과거 예측 정확도를 함께 봅니다. 단순히 과거 평균만 연장하지 마세요.",
+          evidenceKey: "revenueGrowth",
+          evidencePlaceholder: "예: 2026~2030 이사회 승인 사업계획, 주요 고객 수주잔고 및 시장성장률 교차검증",
+        });
+      case 6:
+        return renderNumberQuestion({
+          step: 6,
+          eyebrow: "수익성",
+          question: "매출 중 영업이익은 몇 % 정도 남을까요?",
+          description: "일회성 손익을 제거한 정상 영업이익률(EBIT Margin)을 입력하세요.",
+          field: "ebitMargin",
+          unit: "%",
+          min: -100,
+          max: 100,
+          helpTitle: "영업이익률은 어떻게 정하나요?",
+          helpBody: "승인된 원가·판관비 계획을 기준으로 계산하고, 과거 실적·동종회사 마진과 비교해 정상화 가능성을 확인합니다.",
+          evidenceKey: "ebitMargin",
+          evidencePlaceholder: "예: 사업계획 원가율 72%, 판관비율 16%, EBIT Margin 12%",
+        });
+      case 7:
+        return renderNumberQuestion({
+          step: 7,
+          eyebrow: "현금 법인세",
+          question: "영업이익에 적용할 법인세율은 몇 %인가요?",
+          description: "법정세율과 실제 현금세율은 다를 수 있습니다. 이월결손금의 사용기간도 고려하세요.",
+          field: "taxRate",
+          unit: "%",
+          min: 0,
+          max: 100,
+          helpTitle: "어떤 세율을 쓰나요?",
+          helpBody: "장기적으로 부담할 한계세율을 기본으로 하되, 이월결손금이나 세액공제 효과가 명확하면 기간별 현금세율을 별도 검토합니다.",
+          evidenceKey: "taxRate",
+          evidencePlaceholder: "예: 법정 한계세율 및 이월결손금 소진 예상연도 검토",
+        });
+      case 8:
+        return renderNumberQuestion({
+          step: 8,
+          eyebrow: "비현금 비용",
+          question: "감가상각비는 매출의 몇 %인가요?",
+          description: "현금이 나가지 않는 비용이므로 NOPAT에 다시 더해집니다.",
+          field: "depreciationRate",
+          unit: "%",
+          min: 0,
+          max: 100,
+          helpTitle: "어디서 찾나요?",
+          helpBody: "현금흐름표의 감가상각·상각비와 유형·무형자산 투자계획을 참고해 매출 대비 정상 수준을 정합니다.",
+          evidenceKey: "depreciationRate",
+          evidencePlaceholder: "예: 최근 3개년 D&A/매출 4.6~5.2%, 계획기간 5.0% 적용",
+        });
+      case 9:
+        return renderNumberQuestion({
+          step: 9,
+          eyebrow: "재투자",
+          question: "설비투자(CAPEX)는 매출의 몇 %로 예상하나요?",
+          description: "유형자산과 무형자산 취득 범위를 현금흐름 계획과 일치시키세요.",
+          field: "capexRate",
+          unit: "%",
+          min: 0,
+          max: 200,
+          helpTitle: "CAPEX 범위는 어디까지인가요?",
+          helpBody: "유지보수 투자와 성장 투자를 모두 포함하되, 리스·개발비 등 회계 처리와 현금흐름 분류를 일관되게 적용하세요.",
+          evidenceKey: "capexRate",
+          evidencePlaceholder: "예: 설비 투자계획 승인안, 유지보수 35억원 + 증설 20억원",
+        });
+      case 10:
+        return renderNumberQuestion({
+          step: 10,
+          eyebrow: "운전자본",
+          question: "매출 대비 영업운전자본은 몇 % 필요한가요?",
+          description: "매출채권 + 재고 - 매입채무를 중심으로 보며 현금과 차입금은 제외합니다.",
+          field: "nwcRate",
+          unit: "%",
+          min: -200,
+          max: 200,
+          helpTitle: "왜 증감액만 차감하나요?",
+          helpBody: "매출 성장으로 추가로 묶이는 운전자본만 현금유출입니다. 고객 선결제가 큰 사업은 음수가 될 수도 있습니다.",
+          evidenceKey: "nwcRate",
+          evidencePlaceholder: "예: 최근 3개년 영업 NWC/매출 중위값 9.8%, 10% 적용",
+        });
+      case 11:
+        return renderFcffReview();
+      case 12:
+        return renderTerminalBasisStep();
+      case 13:
+        return renderNumberQuestion({
+          step: 13,
+          eyebrow: terminalBasisLabel(state.terminalBasis),
+          question: "장기적으로 매년 몇 % 성장한다고 볼까요?",
+          description: "명목 현금흐름에는 명목 성장률을 사용하고, WACC보다 반드시 낮게 설정하세요.",
+          field: "terminalGrowth",
+          unit: "%",
+          min: 0,
+          max: 20,
+          helpTitle: "어떤 값을 써야 하나요?",
+          helpBody: "평가기준일 현재의 장기 명목 GDP·물가·산업전망을 확인하세요. 높은 영구성장률은 기업가치를 크게 올리므로 보수적으로 검토합니다.",
+          evidenceKey: "terminalGrowth",
+          evidencePlaceholder: `예: ${terminalBasisLabel(state.terminalBasis)} 장기전망 자료, 기준일 및 발행기관`,
+        });
+      case 14:
+        return renderFinalReview();
+      case RESULT_STEP:
+        return renderResult();
+      default:
+        return "";
+    }
+  };
+
+  const nextButtonLabel = () => {
+    const labels = [
+      "다음: 평가 기준일",
+      "다음: WACC",
+      "다음: 예측기간",
+      "다음: 현재 매출",
+      "다음: 매출 성장률",
+      "다음: 영업이익률",
+      "다음: 법인세율",
+      "다음: 감가상각비",
+      "다음: CAPEX",
+      "다음: 운전자본",
+      "다음: FCFF 검토",
+      "다음: 영구성장 기준",
+      "다음: 영구성장률",
+      "다음: 최종 검토",
+      "계산하고 버전 저장",
+    ];
+    return labels[state.step] || "다음";
+  };
+
+  const renderProgress = () => {
+    const activeStep = Math.min(state.step, TOTAL_QUESTIONS - 1);
+    const activeGroup = groups.findIndex(
+      (group) => activeStep >= group.start && activeStep < group.end,
+    );
+    const progress = state.step === RESULT_STEP ? 100 : ((state.step + 1) / TOTAL_QUESTIONS) * 100;
+
+    return `
+      <header class="guided-progress-shell">
+        <div class="guided-progress-topline">
+          <div>
+            <span class="guided-product-label">GUIDED DCF</span>
+            <strong>${state.step === RESULT_STEP ? "분석 결과" : `${state.step + 1} / ${TOTAL_QUESTIONS}`}</strong>
+          </div>
+          <span class="guided-autosave">✓ 자동 저장됨</span>
+        </div>
+        <div class="guided-group-tabs" aria-label="DCF 진행 구간">
+          ${groups
+            .map(
+              (group, index) => `
+                <span class="${index === activeGroup ? "active" : ""} ${index < activeGroup ? "done" : ""}">
+                  ${index < activeGroup ? "✓ " : ""}${escapeHtml(group.label)}
+                </span>
+              `,
+            )
+            .join("")}
+        </div>
+        <div class="guided-progress-track" aria-hidden="true">
+          <span style="width:${progress}%"></span>
+        </div>
+      </header>
+    `;
+  };
+
+  const renderNavigation = () => {
+    if (state.step === RESULT_STEP) return "";
+    const validation = validateStep(state.step);
+    const finalBlocked = state.step === 14 && !allAssumptionsValid();
+    return `
+      <footer class="guided-navigation">
+        <button type="button" class="secondary" data-action="previous" ${state.step === 0 ? "disabled" : ""}>
+          ← 이전
+        </button>
+        <span class="guided-navigation-hint">Enter 키로 다음</span>
+        <button
+          type="button"
+          class="primary"
+          data-action="next"
+          ${validation.error || finalBlocked ? "disabled" : ""}
+        >
+          ${escapeHtml(nextButtonLabel())} →
+        </button>
+      </footer>
+    `;
+  };
+
+  const render = () => {
+    if (!guidedRoot?.isConnected) return;
+    guidedRoot.innerHTML = `
+      <div class="guided-dcf-inner">
+        ${renderProgress()}
+        ${renderStepContent()}
+        ${renderNavigation()}
+      </div>
+    `;
+
+    const primaryInput = guidedRoot.querySelector(
+      ".guided-primary-input input, .guided-choice.selected",
+    );
+    const focusTarget =
+      primaryInput || guidedRoot.querySelector("#guided-question-title, #guided-result-title");
+    if (focusTarget) {
+      if (focusTarget.matches("h1, h2, h3, h4, h5, h6")) {
+        focusTarget.setAttribute("tabindex", "-1");
+      }
+      try {
+        focusTarget.focus({ preventScroll: true });
+      } catch {
+        // Focus is an enhancement, not a requirement for calculation.
+      }
+    }
+  };
+
+  const updateValidation = () => {
+    if (!guidedRoot?.isConnected) return;
+    const validationHost = guidedRoot.querySelector("[data-validation]");
+    if (validationHost) validationHost.innerHTML = renderValidation(state.step);
+    const next = guidedRoot.querySelector('[data-action="next"]');
+    if (next) {
+      const invalid = Boolean(validateStep(state.step).error);
+      next.disabled = invalid || (state.step === 14 && !allAssumptionsValid());
+    }
+    const revenueReadout = guidedRoot.querySelector('[data-readout="revenue"]');
+    if (revenueReadout)
+      revenueReadout.textContent = `${formatNumber(state.revenue)}억원으로 입력됐어요`;
+  };
+
+  const saveSnapshot = () => {
+    const result = computeDcf();
+    if (!result) return null;
+    try {
+      const snapshots = JSON.parse(localStorage.getItem(SNAPSHOT_KEY) || "[]");
+      const list = Array.isArray(snapshots) ? snapshots : [];
+      const version = (Number(list.at(-1)?.version) || 0) + 1;
+      list.push({
+        version,
+        savedAt: new Date().toISOString(),
+        assumptions: { ...state, step: 14 },
+        result: {
+          enterpriseValue: result.enterpriseValue,
+          forecastPresentValue: result.forecastPresentValue,
+          terminalPresentValue: result.terminalPresentValue,
+          terminalShare: result.terminalShare,
+        },
+      });
+      localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(list.slice(-20)));
+      return version;
+    } catch {
+      return 1;
+    }
+  };
+
+  const onClick = (event) => {
+    const button = event.target.closest("button");
+    if (!button || !guidedRoot?.contains(button)) return;
+
+    if (button.dataset.purpose) {
+      state.purpose = button.dataset.purpose;
+      saveState();
+      render();
+      return;
+    }
+
+    if (button.dataset.terminalBasis) {
+      state.terminalBasis = button.dataset.terminalBasis;
+      saveState();
+      render();
+      return;
+    }
+
+    if (button.dataset.setField) {
+      state[button.dataset.setField] = Number(button.dataset.setValue);
+      saveState();
+      render();
+      return;
+    }
+
+    if (button.dataset.waccId) {
+      const selected = savedWaccRows.find((row) => String(row.id) === button.dataset.waccId);
+      if (selected) {
+        state.wacc = selected.wacc;
+        state.waccSnapshot = { ...selected };
+        state.evidence.wacc = `${selected.name} · ${selected.method === "regression" ? "회귀분석" : "업종 베타"} · WACC ${formatPercent(selected.wacc)}`;
+        saveState();
+        render();
+      }
+      return;
+    }
+
+    if (button.dataset.editStep !== undefined) {
+      state.step = Number(button.dataset.editStep);
+      saveState();
+      render();
+      return;
+    }
+
+    switch (button.dataset.action) {
+      case "previous":
+        state.step = Math.max(0, state.step - 1);
+        saveState();
+        render();
+        break;
+      case "next": {
+        if (validateStep(state.step).error) {
+          updateValidation();
+          break;
+        }
+        if (state.step === 14) {
+          if (!allAssumptionsValid()) {
+            updateValidation();
+            break;
+          }
+          state.lastVersion = saveSnapshot();
+          state.step = RESULT_STEP;
+        } else {
+          state.step += 1;
+        }
+        saveState();
+        render();
+        break;
+      }
+      case "back-to-review":
+        state.step = 14;
+        saveState();
+        render();
+        break;
+      case "new-analysis":
+        if (confirm("현재 결과는 버전으로 보관됩니다. 새 DCF 분석을 시작할까요?")) {
+          state = createDefaultState();
+          saveState();
+          render();
+        }
+        break;
+      default:
+        break;
+    }
+  };
+
+  const onInput = (event) => {
+    const field = event.target.dataset.field;
+    const evidenceKey = event.target.dataset.evidence;
+
+    if (field) {
+      state[field] = event.target.type === "date" ? event.target.value : event.target.value === "" ? "" : Number(event.target.value);
+      if (field === "wacc") state.waccSnapshot = null;
+      saveState();
+      updateValidation();
+    }
+
+    if (evidenceKey) {
+      state.evidence[evidenceKey] = event.target.value;
+      saveState();
+    }
+  };
+
+  const onKeyDown = (event) => {
+    if (
+      event.key !== "Enter" ||
+      event.shiftKey ||
+      event.target.matches("textarea, button") ||
+      state.step === RESULT_STEP
+    )
+      return;
+    const next = guidedRoot?.querySelector('[data-action="next"]');
+    if (next && !next.disabled) {
+      event.preventDefault();
+      next.click();
+    }
+  };
+
+  const mountGuidedDcf = (source) => {
+    source.classList.add("guided-dcf-source");
+    let host = source.previousElementSibling;
+    if (!host?.classList.contains("guided-dcf")) {
+      host = document.createElement("div");
+      host.className = "guided-dcf";
+      source.before(host);
+      host.addEventListener("click", onClick);
+      host.addEventListener("input", onInput);
+      host.addEventListener("change", onInput);
+      host.addEventListener("keydown", onKeyDown);
+    }
+    guidedRoot = host;
+    render();
+    loadSavedWacc();
+  };
+
+  const addBetaAuditGuidance = () => {
+    const purePlay = document.querySelector(".pure-play-container");
+    if (purePlay && !purePlay.querySelector(".audit-beta-guide")) {
+      const guide = document.createElement("section");
+      guide.className = "audit-beta-guide";
+      guide.innerHTML = `
+        <div class="audit-beta-guide-icon">✓</div>
+        <div>
+          <div class="audit-beta-guide-title">
+            <strong>외부감사 대응 권장</strong>
+            <span>Bottom-up Beta</span>
+          </div>
+          <p>동종 상장사 비교 → 회사별 무부채화 → 무부채 베타 중위값 → 목표 D/E로 재부채화</p>
+          <small>기준서는 특정 베타 산식을 강제하지 않습니다. 비교기업 선정, 동일한 기준일·기간·빈도, 포함·제외 사유와 원본 데이터가 핵심입니다.</small>
+        </div>
+      `;
+      purePlay.prepend(guide);
+    }
+
+    const regression = document.querySelector(".regression-beta-calculator");
+    if (regression && !regression.querySelector(".audit-regression-guide")) {
+      const guide = document.createElement("section");
+      guide.className = "audit-regression-guide";
+      guide.innerHTML = `
+        <strong>감사 대응 시 보조 검증으로 사용하세요</strong>
+        <p>단일 회사 회귀베타는 기간·거래량·사업구조 변화에 민감합니다. 비교기업 Bottom-up Beta와 2년/5년 기간 민감도를 함께 제시하면 설명력이 좋아집니다.</p>
+      `;
+      regression.prepend(guide);
+    }
+  };
+
+  const normalizeWaccRow = (row) => ({
+    id: row.id,
+    name: row.name || "저장된 WACC",
+    method: row.method || "industry",
+    wacc: Number(row.wacc) || 0,
+    costOfEquity: Number(row.cost_of_equity ?? row.costOfEquity) || 0,
+    leveredBeta: Number(row.levered_beta ?? row.leveredBeta) || 0,
+    createdAt: row.created_at ?? row.createdAt ?? null,
+  });
+
+  async function loadSavedWacc() {
+    if (waccLoadStarted) return;
+    waccLoadStarted = true;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1800);
+    try {
+      const response = await fetch(WACC_API, { signal: controller.signal });
+      const payload = await response.json();
+      if (payload?.success && Array.isArray(payload.data)) {
+        savedWaccRows = payload.data.map(normalizeWaccRow).filter((row) => row.wacc > 0);
+        if (guidedRoot?.isConnected && state.step === 2) render();
+      }
+    } catch {
+      // Manual WACC remains available when the optional local API is offline.
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  const syncPage = () => {
+    syncQueued = false;
+    const source = document.querySelector(".dcf-analysis");
+    const existingGuided = document.querySelector(".guided-dcf");
+
+    if (source) {
+      if (!existingGuided || !source.classList.contains("guided-dcf-source")) {
+        mountGuidedDcf(source);
+      } else {
+        guidedRoot = existingGuided;
+      }
+    } else if (existingGuided) {
+      existingGuided.remove();
+      guidedRoot = null;
+    }
+
+    addBetaAuditGuidance();
+  };
+
+  const scheduleSync = () => {
+    if (syncQueued) return;
+    syncQueued = true;
+    queueMicrotask(syncPage);
+  };
+
+  globalThis.ValueScannerGuidedDcf = Object.freeze({
+    calculate: (overrides = {}) => computeDcf(overrides),
+    getAssumptions: () => JSON.parse(JSON.stringify(state)),
+    validateStep: (step) => ({ ...validateStep(step) }),
+    startNew: () => {
+      state = createDefaultState();
+      saveState();
+      if (guidedRoot) render();
+      return JSON.parse(JSON.stringify(state));
+    },
+  });
+
+  syncPage();
+
+  const appRoot = document.getElementById("root");
+  if (appRoot) {
+    new MutationObserver(scheduleSync).observe(appRoot, {
+      childList: true,
+      subtree: true,
+    });
+  }
+})();
