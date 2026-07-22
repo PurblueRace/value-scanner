@@ -2,7 +2,20 @@
   const API_ORIGIN = "http://localhost:3001";
   const WACC_PATH = "/api/wacc";
   const STORAGE_KEY = "value-scanner:wacc-records:v1";
+  const GUIDE_METHOD_KEY = "value-scanner:wacc-guide-method-v1";
+  const WACC_CHANGED_EVENT = "value-scanner:wacc-changed";
   const nativeFetch = window.fetch.bind(window);
+  const supportedGuideMethods = new Set(["industry", "regression", "direct", "levered"]);
+
+  const notifyWaccChanged = (method) => {
+    try {
+      window.dispatchEvent(new CustomEvent(WACC_CHANGED_EVENT, {
+        detail: { method, changedAt: new Date().toISOString() },
+      }));
+    } catch {
+      // A refresh on the next DCF mount still picks up the changed records.
+    }
+  };
 
   const jsonResponse = (payload) => new Response(JSON.stringify(payload), {
     status: 200,
@@ -26,12 +39,36 @@
     }
   };
 
+  const readGuideMethod = () => {
+    try {
+      const raw = localStorage.getItem(GUIDE_METHOD_KEY);
+      if (!raw) return null;
+      try {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed === "string") return parsed;
+        return parsed?.method ?? parsed?.id ?? parsed?.value ?? parsed?.selectedMethod ?? null;
+      } catch {
+        return raw;
+      }
+    } catch {
+      return null;
+    }
+  };
+
+  const resolveGuideMethod = (value) => {
+    const payloadMethod = value.guideMethod ?? value.guide_method;
+    if (supportedGuideMethods.has(payloadMethod)) return payloadMethod;
+    const selectedMethod = readGuideMethod();
+    if (supportedGuideMethods.has(selectedMethod)) return selectedMethod;
+    return supportedGuideMethods.has(value.method) ? value.method : "industry";
+  };
+
   const toStoredRecord = (value) => {
     const now = new Date().toISOString();
     return {
       id: globalThis.crypto?.randomUUID?.() || `local-${Date.now()}`,
       name: value.name || "저장한 WACC",
-      method: value.method || "industry",
+      method: resolveGuideMethod(value),
       wacc: Number(value.wacc) || 0,
       cost_of_equity: Number(value.costOfEquity) || 0,
       cost_of_debt: Number(value.costOfDebt) || 0,
@@ -86,13 +123,35 @@
       return nativeFetch(input, options);
     }
 
+    const method = String(options?.method || input?.method || "GET").toUpperCase();
+    const changesRecords = method === "POST" || method === "DELETE";
+    let requestOptions = options;
+
+    if (method === "POST" && typeof options?.body === "string") {
+      try {
+        const value = JSON.parse(options.body);
+        const guideMethod = resolveGuideMethod(value);
+        requestOptions = {
+          ...options,
+          body: JSON.stringify({ ...value, method: guideMethod }),
+        };
+      } catch {
+        // The offline response will return the existing validation error.
+      }
+    }
+
     try {
-      const response = await nativeFetch(input, options);
-      if (response.ok) return response;
+      const response = await nativeFetch(input, requestOptions);
+      if (response.ok) {
+        if (changesRecords) notifyWaccChanged(method);
+        return response;
+      }
     } catch {
       // The downloaded static app has no API server, so local storage is the fallback.
     }
 
-    return offlineWaccResponse(url, options);
+    const response = offlineWaccResponse(url, requestOptions);
+    if (changesRecords) notifyWaccChanged(method);
+    return response;
   };
 })();

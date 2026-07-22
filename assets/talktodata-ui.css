@@ -1,0 +1,2035 @@
+/*
+ * Value Scanner — TalkToData-inspired UI layer
+ * Loaded after the production and legacy theme styles.
+ */
+
+:root {
+  color-scheme: light;
+  --talkdata-white: #ffffff;
+  --talkdata-canvas: #ffffff;
+  --talkdata-surface: #f9fafb;
+  --talkdata-surface-strong: #f3f4f6;
+  --talkdata-border: #e5e7eb;
+  --talkdata-border-strong: #d1d5db;
+  --talkdata-text: #111827;
+  --talkdata-muted: #6b7280;
+  --talkdata-subtle: #9ca3af;
+  --talkdata-accent: #ff4b4b;
+  --talkdata-accent-hover: #e73f3f;
+  --talkdata-accent-soft: #fff1f1;
+  --talkdata-accent-faint: #fff8f8;
+  --talkdata-info: #eaf4ff;
+  --talkdata-info-border: #cfe5fb;
+  --talkdata-success: #15803d;
+  --talkdata-warning: #a16207;
+  --talkdata-danger: #b42318;
+  --talkdata-shadow: 0 1px 2px rgba(17, 24, 39, 0.05),
+    0 4px 14px rgba(17, 24, 39, 0.035);
+  --talkdata-sidebar-width: 222px;
+
+  /* Keep the compiled application on the same visual tokens. */
+  --vs-canvas: var(--talkdata-canvas);
+  --vs-canvas-blue: var(--talkdata-canvas);
+  --vs-canvas-violet: var(--talkdata-canvas);
+  --vs-surface: var(--talkdata-white);
+  --vs-surface-glass: var(--talkdata-white);
+  --vs-surface-soft: var(--talkdata-surface);
+  --vs-surface-brand: var(--talkdata-accent-soft);
+  --vs-text: var(--talkdata-text);
+  --vs-text-secondary: var(--talkdata-muted);
+  --vs-text-muted: var(--talkdata-muted);
+  --vs-border: var(--talkdata-border);
+  --vs-border-control: var(--talkdata-border-strong);
+  --vs-primary: var(--talkdata-accent);
+  --vs-primary-hover: var(--talkdata-accent-hover);
+  --vs-primary-soft: var(--talkdata-accent-soft);
+  --vs-blue: #3b82f6;
+  --vs-green: var(--talkdata-success);
+  --vs-warning: var(--talkdata-warning);
+  --vs-danger: var(--talkdata-danger);
+  --vs-focus: var(--talkdata-accent);
+  --vs-radius-control: 8px;
+  --vs-radius-card: 10px;
+  --vs-radius-hero: 12px;
+  --vs-shadow-card: var(--talkdata-shadow);
+  --vs-shadow-float: 0 12px 30px rgba(17, 24, 39, 0.1);
+
+  --bg-primary: var(--talkdata-canvas);
+  --bg-secondary: var(--talkdata-white);
+  --bg-tertiary: var(--talkdata-surface);
+  --bg-card: var(--talkdata-white);
+  --bg-input: var(--talkdata-white);
+  --accent-primary: var(--talkdata-accent);
+  --accent-secondary: #ff7a7a;
+  --accent-success: var(--talkdata-success);
+  --accent-warning: var(--talkdata-warning);
+  --accent-danger: var(--talkdata-danger);
+  --text-primary: var(--talkdata-text);
+  --text-secondary: var(--talkdata-muted);
+  --text-muted: var(--talkdata-muted);
+  --border-color: var(--talkdata-border);
+  --border-focus: var(--talkdata-accent);
+  --glass-bg: var(--talkdata-white);
+  --glass-border: var(--talkdata-border);
+  --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.04);
+  --shadow-md: var(--talkdata-shadow);
+  --shadow-lg: 0 12px 30px rgba(17, 24, 39, 0.1);
+  --shadow-glow: 0 0 0 3px rgba(255, 75, 75, 0.14);
+  --sidebar-width: var(--talkdata-sidebar-width);
+}
+
+html,
+body,
+#root {
+  min-width: 0;
+  background: var(--talkdata-canvas);
+}
+
+body {
+  color: var(--talkdata-text);
+  background: var(--talkdata-canvas);
+  font-family: Inter, "Pretendard Variable", Pretendard, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+  letter-spacing: -0.012em;
+}
+
+body::before,
+body::after {
+  display: none;
+}
+
+::selection {
+  color: var(--talkdata-text);
+  background: #ffd6d6;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+body :is(
+    a[href],
+    button,
+    input,
+    select,
+    textarea,
+    summary,
+    [role="button"],
+    [tabindex]:not([tabindex="-1"])
+  ):focus-visible {
+  outline: 3px solid rgba(255, 75, 75, 0.26);
+  outline-offset: 2px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* TalkToData home                                                             */
+/* -------------------------------------------------------------------------- */
+
+.app.home-dashboard-mode {
+  display: block;
+  height: 100dvh;
+  padding: 0;
+  overflow: hidden;
+  background: var(--talkdata-white);
+}
+
+.app.home-dashboard-mode .main-content {
+  width: 100%;
+  height: 100dvh;
+  padding: 0;
+  overflow: hidden;
+  background: var(--talkdata-white);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.app.home-dashboard-mode .sidebar,
+.app.home-dashboard-mode .help-button {
+  display: none !important;
+}
+
+.home-dashboard {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+  background: var(--talkdata-white);
+}
+
+.home-dashboard-inner.talkdata-home,
+.talkdata-home {
+  position: relative;
+  display: grid;
+  width: 100%;
+  max-width: none;
+  min-height: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  color: var(--talkdata-text);
+  background: var(--talkdata-white);
+  grid-template-columns: var(--talkdata-sidebar-width) minmax(0, 1fr);
+  gap: 0;
+}
+
+.talkdata-home *,
+.talkdata-home *::before,
+.talkdata-home *::after {
+  box-sizing: border-box;
+}
+
+.talkdata-home :where(h1, h2, h3, h4, p, span, strong, small, li) {
+  user-select: text;
+}
+
+.talkdata-home :where(button, [role="button"]) {
+  user-select: none;
+}
+
+.talkdata-sidebar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  width: var(--talkdata-sidebar-width);
+  min-width: var(--talkdata-sidebar-width);
+  min-height: 0;
+  padding: 20px 14px 16px;
+  overflow: hidden auto;
+  flex-direction: column;
+  color: var(--talkdata-text);
+  background: var(--talkdata-white);
+  border-right: 1px solid var(--talkdata-border);
+  scrollbar-width: thin;
+}
+
+.talkdata-sidebar-brand {
+  display: flex;
+  min-height: 34px;
+  padding: 1px 7px;
+  align-items: center;
+  gap: 10px;
+  color: var(--talkdata-text);
+}
+
+.talkdata-sidebar-brand > :first-child {
+  position: relative;
+  display: block;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  color: #fff;
+  background: var(--talkdata-accent);
+  border-radius: 7px;
+  place-items: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.talkdata-sidebar-brand .aurelius-brand-mark i {
+  position: absolute;
+  top: auto;
+  right: auto;
+  bottom: 7px;
+  display: block;
+  width: 3px;
+  background: #fff;
+  border-radius: 2px 2px 1px 1px;
+  box-shadow: none;
+}
+
+.talkdata-sidebar-brand .aurelius-brand-mark i:nth-child(1) {
+  left: 7px;
+  height: 6px;
+}
+
+.talkdata-sidebar-brand .aurelius-brand-mark i:nth-child(2) {
+  left: 12px;
+  height: 11px;
+}
+
+.talkdata-sidebar-brand .aurelius-brand-mark i:nth-child(3) {
+  left: 17px;
+  height: 15px;
+}
+
+.talkdata-sidebar-brand > div {
+  min-width: 0;
+}
+
+.talkdata-sidebar-brand strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.94rem;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.talkdata-sidebar-brand small {
+  display: block;
+  margin-top: 1px;
+  overflow: hidden;
+  color: var(--talkdata-muted);
+  font-size: 0.61rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.talkdata-workspace-card {
+  display: flex;
+  min-height: 54px;
+  margin-top: 20px;
+  padding: 10px 11px;
+  align-items: center;
+  gap: 9px;
+  color: var(--talkdata-text);
+  background: var(--talkdata-surface);
+  border: 1px solid var(--talkdata-border);
+  border-radius: 9px;
+}
+
+.talkdata-workspace-card > :first-child {
+  display: grid;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  color: var(--talkdata-accent);
+  background: var(--talkdata-accent-soft);
+  border-radius: 7px;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.talkdata-workspace-card > div,
+.talkdata-workspace-card > span {
+  min-width: 0;
+}
+
+.talkdata-workspace-card strong,
+.talkdata-workspace-card small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.talkdata-workspace-card strong {
+  color: var(--talkdata-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.talkdata-workspace-card small {
+  margin-top: 2px;
+  color: var(--talkdata-muted);
+  font-size: 0.64rem;
+}
+
+.talkdata-new-analysis {
+  display: inline-flex;
+  width: 100%;
+  min-height: 40px;
+  margin-top: 10px;
+  padding: 9px 12px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: #fff;
+  background: var(--talkdata-accent);
+  border: 1px solid var(--talkdata-accent);
+  border-radius: 8px;
+  box-shadow: none;
+  cursor: pointer;
+  font-size: 0.74rem;
+  font-weight: 700;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.talkdata-new-analysis:hover {
+  background: var(--talkdata-accent-hover);
+  border-color: var(--talkdata-accent-hover);
+}
+
+.talkdata-divider {
+  width: 100%;
+  height: 1px;
+  margin: 16px 0 10px;
+  background: var(--talkdata-border);
+  border: 0;
+}
+
+.talkdata-menu {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.talkdata-menu :where(a, button) {
+  display: flex;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  align-items: center;
+  gap: 9px;
+  color: var(--talkdata-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.talkdata-menu :where(a, button):hover {
+  color: var(--talkdata-text);
+  background: var(--talkdata-surface);
+}
+
+.talkdata-menu :where(a, button).active,
+.talkdata-menu :where(a, button)[aria-current="page"],
+.talkdata-menu :where(a, button)[aria-pressed="true"] {
+  color: var(--talkdata-accent);
+  background: var(--talkdata-accent-soft);
+}
+
+.talkdata-menu :where(svg, .icon) {
+  flex: 0 0 17px;
+  width: 17px;
+  height: 17px;
+  color: currentColor;
+}
+
+.talkdata-menu :where(a, button) > span:first-child {
+  display: grid;
+  flex: 0 0 17px;
+  width: 17px;
+  height: 17px;
+  color: currentColor;
+  place-items: center;
+  font-size: 0.73rem;
+  line-height: 1;
+}
+
+.talkdata-side-status {
+  margin-top: auto;
+  padding: 13px 8px 3px;
+  color: var(--talkdata-muted);
+  border-top: 1px solid var(--talkdata-border);
+  font-size: 0.65rem;
+  line-height: 1.5;
+}
+
+.talkdata-side-status strong {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--talkdata-text);
+  font-size: 0.71rem;
+}
+
+.talkdata-side-status > span:first-child {
+  display: flex;
+  align-items: center;
+  color: var(--talkdata-text);
+  font-size: 0.67rem;
+  font-weight: 650;
+}
+
+.talkdata-side-status > span:first-child > i:first-child {
+  display: inline-block;
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  background: #22c55e;
+  border-radius: 50%;
+  font-size: 0;
+  font-style: normal;
+}
+
+.talkdata-side-status > small:last-child {
+  display: block;
+  margin-top: 4px;
+  color: var(--talkdata-muted);
+  font-size: 0.59rem;
+  line-height: 1.4;
+}
+
+.talkdata-main {
+  min-width: 0;
+  min-height: 0;
+  padding: 30px clamp(28px, 4vw, 54px) 34px;
+  overflow: auto;
+  color: var(--talkdata-text);
+  background: var(--talkdata-white);
+  scrollbar-gutter: stable;
+}
+
+.talkdata-main > * {
+  width: min(100%, 1040px);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.talkdata-intro {
+  display: block;
+}
+
+.talkdata-intro > header {
+  display: block;
+}
+
+.talkdata-intro h1,
+.talkdata-intro h2 {
+  margin: 0;
+  color: var(--talkdata-text);
+  font-size: clamp(1.55rem, 2.4vw, 2rem);
+  font-weight: 760;
+  letter-spacing: -0.045em;
+  line-height: 1.18;
+}
+
+#home-dashboard-title:focus {
+  outline: 0;
+  box-shadow: none;
+}
+
+#home-dashboard-title:focus-visible {
+  outline: 3px solid rgba(255, 75, 75, 0.26);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+.talkdata-intro p {
+  max-width: 620px;
+  margin: 6px 0 0;
+  color: var(--talkdata-muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.talkdata-intro > header > small {
+  display: block;
+  max-width: 720px;
+  margin-top: 4px;
+  color: var(--talkdata-subtle);
+  font-size: 0.67rem;
+  line-height: 1.5;
+}
+
+.talkdata-command {
+  display: flex;
+  width: min(100%, 1040px);
+  min-height: 50px;
+  margin-top: 20px;
+  padding: 7px 8px 7px 15px;
+  align-items: center;
+  gap: 10px;
+  color: var(--talkdata-text);
+  background: var(--talkdata-white);
+  border: 1px solid var(--talkdata-border-strong);
+  border-radius: 9px;
+  box-shadow: var(--talkdata-shadow);
+}
+
+button.talkdata-command {
+  cursor: pointer;
+  text-align: left;
+}
+
+.talkdata-command:hover {
+  border-color: #b9bec7;
+}
+
+.talkdata-command :where(svg, .icon, .talkdata-command-icon) {
+  display: grid;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  color: var(--talkdata-muted);
+  place-items: center;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.talkdata-command > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.talkdata-command > div strong,
+.talkdata-command > div small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.talkdata-command > div strong {
+  color: var(--talkdata-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.talkdata-command > div small {
+  margin-top: 2px;
+  color: var(--talkdata-muted);
+  font-size: 0.62rem;
+}
+
+.talkdata-command :where(input, textarea) {
+  flex: 1;
+  min-width: 0;
+  min-height: 32px;
+  padding: 0;
+  color: var(--talkdata-text);
+  background: transparent;
+  border: 0;
+  outline: 0;
+  resize: none;
+}
+
+.talkdata-command :where(input, textarea)::placeholder,
+.talkdata-command > span {
+  color: var(--talkdata-muted);
+}
+
+.talkdata-command > button,
+.talkdata-command > :last-child:is(kbd, strong) {
+  display: inline-flex;
+  min-width: 34px;
+  min-height: 32px;
+  padding: 6px 9px;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: var(--talkdata-accent);
+  border: 1px solid var(--talkdata-accent);
+  border-radius: 7px;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.talkdata-command > button {
+  flex: 0 0 auto;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.talkdata-command > button:hover {
+  background: var(--talkdata-accent-hover);
+  border-color: var(--talkdata-accent-hover);
+}
+
+.talkdata-intro:has(.talkdata-next-step) {
+  max-width: 760px;
+  padding-top: clamp(34px, 9vh, 96px);
+}
+
+.talkdata-next-step {
+  min-height: 76px;
+  padding: 12px 12px 12px 18px;
+}
+
+.talkdata-next-step > div strong,
+.talkdata-next-step > div small {
+  white-space: normal;
+}
+
+.talkdata-next-step > div strong {
+  font-size: 0.9rem;
+}
+
+.talkdata-next-step > div small {
+  margin-top: 5px;
+  font-size: 0.69rem;
+  line-height: 1.5;
+}
+
+.talkdata-secondary-path {
+  display: inline-flex;
+  margin-top: 14px;
+  padding: 8px 2px;
+  color: var(--talkdata-muted);
+  background: transparent;
+  border: 0;
+  font-size: 0.69rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.talkdata-secondary-path:hover {
+  color: var(--talkdata-accent-hover);
+}
+
+.talkdata-tabs {
+  display: flex;
+  min-height: 38px;
+  margin-top: 16px;
+  overflow-x: auto;
+  align-items: flex-end;
+  gap: 22px;
+  border-bottom: 1px solid var(--talkdata-border);
+  scrollbar-width: none;
+}
+
+.talkdata-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.talkdata-tabs :where(button, a) {
+  position: relative;
+  display: inline-flex;
+  min-height: 38px;
+  padding: 0 1px 10px;
+  align-items: center;
+  color: var(--talkdata-muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 0.73rem;
+  font-weight: 650;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.talkdata-tabs :where(button, a):hover {
+  color: var(--talkdata-text);
+}
+
+.talkdata-tabs :where(button, a).active,
+.talkdata-tabs :where(button, a)[aria-selected="true"],
+.talkdata-tabs :where(button, a)[aria-current="page"] {
+  color: var(--talkdata-accent);
+}
+
+.talkdata-tabs :where(button, a).active::after,
+.talkdata-tabs :where(button, a)[aria-selected="true"]::after,
+.talkdata-tabs :where(button, a)[aria-current="page"]::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: var(--talkdata-accent);
+  content: "";
+}
+
+.talkdata-notice {
+  display: flex;
+  min-height: 48px;
+  margin-top: 14px;
+  padding: 11px 14px;
+  align-items: flex-start;
+  gap: 10px;
+  color: #334155;
+  background: var(--talkdata-info);
+  border: 1px solid var(--talkdata-info-border);
+  border-radius: 8px;
+  font-size: 0.71rem;
+  line-height: 1.55;
+}
+
+.talkdata-notice :where(svg, .icon),
+.talkdata-notice > span:first-child {
+  display: grid;
+  flex: 0 0 17px;
+  width: 17px;
+  height: 17px;
+  color: #2563eb;
+  place-items: center;
+  line-height: 1;
+}
+
+.talkdata-notice strong {
+  color: #1e3a5f;
+}
+
+.talkdata-notice p {
+  min-width: 0;
+  margin: 0;
+  flex: 1;
+}
+
+.talkdata-notice > button {
+  flex: 0 0 auto;
+  min-height: 26px;
+  padding: 4px 8px;
+  color: #1d4ed8;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid #b8d8f6;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.63rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.talkdata-notice > button:hover {
+  background: #fff;
+  border-color: #8fc1ef;
+}
+
+.talkdata-overview {
+  margin-top: 18px;
+}
+
+.talkdata-overview-header {
+  display: flex;
+  min-height: 30px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.talkdata-overview-header h2,
+.talkdata-overview-header h3 {
+  margin: 0;
+  color: var(--talkdata-text);
+  font-size: 0.95rem;
+  font-weight: 740;
+  letter-spacing: -0.02em;
+}
+
+.talkdata-overview-header > div > span:first-child {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--talkdata-accent);
+  font-size: 0.56rem;
+  font-weight: 780;
+  letter-spacing: 0.1em;
+}
+
+.talkdata-overview-header p,
+.talkdata-overview-header small {
+  color: var(--talkdata-muted);
+  font-size: 0.67rem;
+}
+
+.talkdata-metric-grid {
+  display: grid;
+  margin-top: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.talkdata-metric-card {
+  position: relative;
+  min-width: 0;
+  min-height: 92px;
+  padding: 13px 14px;
+  overflow: hidden;
+  color: var(--talkdata-text);
+  background: var(--talkdata-white);
+  border: 1px solid var(--talkdata-border);
+  border-radius: 9px;
+  box-shadow: var(--talkdata-shadow);
+}
+
+.talkdata-metric-card small,
+.talkdata-metric-card > span:first-child {
+  display: block;
+  color: var(--talkdata-muted);
+  font-size: 0.64rem;
+  line-height: 1.35;
+}
+
+.talkdata-metric-card strong {
+  display: block;
+  margin-top: 7px;
+  overflow: hidden;
+  color: var(--talkdata-text);
+  font-size: clamp(1rem, 1.7vw, 1.28rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 760;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.talkdata-metric-card :where(em, b) {
+  display: block;
+  margin-top: 5px;
+  color: var(--talkdata-muted);
+  font-size: 0.59rem;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.talkdata-metric-card > span:first-child {
+  position: absolute;
+  top: 11px;
+  right: 11px;
+  display: grid;
+  width: 25px;
+  height: 25px;
+  color: var(--talkdata-accent);
+  background: var(--talkdata-accent-soft);
+  border-radius: 6px;
+  place-items: center;
+  font-size: 0.65rem;
+  font-weight: 780;
+  line-height: 1;
+}
+
+.talkdata-metric-card :where(.positive, .up, [data-tone="positive"]) {
+  color: var(--talkdata-success);
+}
+
+.talkdata-metric-card :where(.accent, [data-tone="accent"]) {
+  color: var(--talkdata-accent);
+}
+
+.talkdata-overview-grid {
+  display: grid;
+  margin-top: 10px;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  gap: 10px;
+}
+
+.talkdata-progress-card,
+.talkdata-route-card {
+  min-width: 0;
+  min-height: 148px;
+  padding: 15px 16px;
+  color: var(--talkdata-text);
+  background: var(--talkdata-white);
+  border: 1px solid var(--talkdata-border);
+  border-radius: 9px;
+  box-shadow: var(--talkdata-shadow);
+}
+
+.talkdata-progress-card > header,
+.talkdata-route-card > header,
+.talkdata-progress-card > :first-child,
+.talkdata-route-card > :first-child {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.talkdata-progress-card > header > div,
+.talkdata-route-card > header > div {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.talkdata-progress-card > header > div > span:first-child,
+.talkdata-route-card > header > div > span:first-child {
+  display: grid;
+  flex: 0 0 27px;
+  width: 27px;
+  height: 27px;
+  color: var(--talkdata-accent);
+  background: var(--talkdata-accent-soft);
+  border-radius: 6px;
+  place-items: center;
+  font-size: 0.66rem;
+}
+
+.talkdata-progress-card > header > div > div,
+.talkdata-route-card > header > div > div {
+  min-width: 0;
+}
+
+.talkdata-progress-card > header :where(strong, small),
+.talkdata-route-card > header :where(strong, small) {
+  display: block;
+}
+
+.talkdata-progress-card > header > em {
+  flex: 0 0 auto;
+  color: var(--talkdata-accent);
+  font-size: 0.82rem;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  font-weight: 760;
+}
+
+.talkdata-progress-card h3,
+.talkdata-route-card h3,
+.talkdata-progress-card strong,
+.talkdata-route-card strong {
+  margin: 0;
+  color: var(--talkdata-text);
+  font-size: 0.78rem;
+  font-weight: 720;
+}
+
+.talkdata-progress-card p,
+.talkdata-route-card p,
+.talkdata-progress-card small,
+.talkdata-route-card small {
+  color: var(--talkdata-muted);
+  font-size: 0.63rem;
+  line-height: 1.45;
+}
+
+.talkdata-progress-track {
+  width: 100%;
+  height: 7px;
+  margin-top: 17px;
+  overflow: hidden;
+  background: var(--talkdata-surface-strong);
+  border-radius: 99px;
+}
+
+.talkdata-progress-track > :first-child {
+  display: block;
+  height: 100%;
+  background: var(--talkdata-accent);
+  border-radius: inherit;
+}
+
+.talkdata-progress-card > footer {
+  display: flex;
+  margin-top: 10px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--talkdata-muted);
+  font-size: 0.62rem;
+}
+
+.talkdata-progress-card > footer .talkdata-card-action {
+  margin-top: 0;
+}
+
+.talkdata-route-list {
+  display: grid;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.talkdata-route-list li,
+.talkdata-route-list > button,
+.talkdata-route-list > a {
+  display: flex;
+  min-width: 0;
+  min-height: 40px;
+  padding: 7px 8px;
+  align-items: center;
+  gap: 7px;
+  color: var(--talkdata-muted);
+  background: var(--talkdata-surface);
+  border: 1px solid var(--talkdata-border);
+  border-radius: 7px;
+  font-size: 0.62rem;
+  text-decoration: none;
+}
+
+.talkdata-route-list li > :first-child,
+.talkdata-route-list > button > :first-child,
+.talkdata-route-list > a > :first-child {
+  display: grid;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  color: var(--talkdata-accent);
+  background: var(--talkdata-accent-soft);
+  border-radius: 5px;
+  place-items: center;
+  font-size: 0.58rem;
+  font-weight: 800;
+}
+
+.talkdata-card-action {
+  display: inline-flex;
+  min-height: 30px;
+  margin-top: 12px;
+  padding: 6px 9px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: var(--talkdata-accent);
+  background: var(--talkdata-accent-soft);
+  border: 1px solid #ffd1d1;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.talkdata-card-action:hover {
+  color: var(--talkdata-accent-hover);
+  background: #ffe8e8;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Existing calculators: flat shell, restrained cards, coral interaction      */
+/* -------------------------------------------------------------------------- */
+
+.app:not(.home-dashboard-mode) {
+  display: flex;
+  height: 100dvh;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--talkdata-white);
+}
+
+.app:not(.home-dashboard-mode) .sidebar {
+  position: relative;
+  width: var(--talkdata-sidebar-width);
+  min-width: var(--talkdata-sidebar-width);
+  height: 100%;
+  padding: 18px 10px 12px;
+  overflow: hidden;
+  background: var(--talkdata-white);
+  border: 0;
+  border-right: 1px solid var(--talkdata-border);
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.sidebar::after,
+.sidebar-logo::before,
+.sidebar-header::after {
+  display: none;
+}
+
+.sidebar-header {
+  padding: 1px 9px 16px;
+  border-bottom: 1px solid var(--talkdata-border);
+}
+
+.sidebar-logo {
+  gap: 9px;
+}
+
+.sidebar-logo svg {
+  display: block;
+  width: 30px;
+  height: 30px;
+  padding: 6px;
+  color: #fff;
+  background: var(--talkdata-accent);
+  border-radius: 7px;
+  box-shadow: none;
+}
+
+.sidebar-logo h1 {
+  color: var(--talkdata-text);
+  background: none;
+  font-size: 0.96rem;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  -webkit-text-fill-color: currentColor;
+}
+
+.sidebar-nav {
+  padding: 12px 0 76px;
+  scrollbar-width: thin;
+}
+
+.nav-section {
+  margin-bottom: 12px;
+}
+
+.nav-section-title {
+  padding: 7px 10px;
+  color: var(--talkdata-subtle);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+}
+
+.nav-item {
+  min-height: 39px;
+  margin: 1px 0;
+  padding: 8px 10px;
+  gap: 9px;
+  color: var(--talkdata-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  box-shadow: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.nav-item:hover {
+  color: var(--talkdata-text);
+  background: var(--talkdata-surface);
+}
+
+.nav-item.active {
+  color: var(--talkdata-accent);
+  background: var(--talkdata-accent-soft);
+  border: 0;
+  box-shadow: none;
+}
+
+.nav-item svg {
+  width: 17px;
+  height: 17px;
+  color: currentColor;
+}
+
+.nav-sub-items {
+  margin: 3px 0 0 13px;
+  padding-left: 7px;
+  border-left: 1px solid var(--talkdata-border);
+}
+
+.nav-sub-item,
+.nav-sub-item:hover,
+.nav-sub-item.active {
+  border-left: 0;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.nav-sub-item {
+  color: var(--talkdata-muted);
+  background: transparent;
+}
+
+.nav-sub-item:hover {
+  color: var(--talkdata-text);
+  background: var(--talkdata-surface);
+}
+
+.nav-sub-item.active {
+  color: var(--talkdata-accent);
+  background: var(--talkdata-accent-soft);
+}
+
+.sidebar > div:last-child[style] {
+  color: var(--talkdata-muted);
+  border-top-color: var(--talkdata-border) !important;
+}
+
+.app:not(.home-dashboard-mode) .main-content {
+  min-width: 0;
+  overflow: hidden;
+  background: var(--talkdata-white);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.main-header {
+  padding: 22px 30px 15px;
+  background: var(--talkdata-white);
+  border: 0;
+}
+
+.main-header h2 {
+  color: var(--talkdata-text);
+  font-size: clamp(1.4rem, 2.2vw, 1.75rem);
+  font-weight: 760;
+  letter-spacing: -0.04em;
+}
+
+.main-header p {
+  max-width: 850px;
+  margin-top: 5px;
+  color: var(--talkdata-muted);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.method-tabs {
+  width: auto;
+  margin: 0 30px 12px;
+  padding: 0;
+  gap: 20px;
+  overflow-x: auto;
+  background: var(--talkdata-white);
+  border: 0;
+  border-bottom: 1px solid var(--talkdata-border);
+  border-radius: 0;
+}
+
+.method-tab {
+  position: relative;
+  min-height: 39px;
+  padding: 8px 1px 10px;
+  color: var(--talkdata-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.method-tab:hover {
+  color: var(--talkdata-text);
+  background: transparent;
+  border-color: transparent;
+  transform: none;
+}
+
+.method-tab.active {
+  color: var(--talkdata-accent);
+  background: transparent;
+  border: 0;
+  box-shadow: inset 0 -2px 0 var(--talkdata-accent);
+}
+
+.content-area {
+  padding: 8px 30px 30px;
+  overflow-y: auto;
+  background: var(--talkdata-white);
+  scrollbar-gutter: stable;
+}
+
+.card,
+.result-card,
+.info-card,
+.warning-card,
+.beta-result-card,
+.risk-breakdown-section,
+.capital-structure-visual,
+.wacc-calculation-detail,
+.audit-beta-guide,
+.audit-regression-guide,
+.guided-progress-shell,
+.guided-question-card,
+.guided-result {
+  background: var(--talkdata-white);
+  border: 1px solid var(--talkdata-border);
+  border-radius: 10px;
+  box-shadow: var(--talkdata-shadow);
+  backdrop-filter: none;
+}
+
+.card {
+  padding: clamp(18px, 2.2vw, 24px);
+  margin-bottom: 14px;
+}
+
+.card-header {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--talkdata-border);
+}
+
+.card-title,
+.input-section-title,
+.subsection-title,
+.section-title,
+.chart-title,
+.table-title,
+.preview-title {
+  color: var(--talkdata-text);
+}
+
+.card-desc,
+.form-hint,
+.data-info,
+.hint,
+.guided-question-copy p,
+.guided-help-body,
+.guided-readout,
+.guided-assumption-row,
+.guided-result-note {
+  color: var(--talkdata-muted);
+}
+
+.form-input,
+.form-select,
+.form-textarea,
+.tutorial-input,
+.search-input,
+.guided-primary-input,
+.guided-evidence textarea,
+.de-input,
+.tax-input {
+  min-height: 46px;
+  color: var(--talkdata-text);
+  background: var(--talkdata-white);
+  border: 1px solid var(--talkdata-border-strong);
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.form-input:hover,
+.form-select:hover,
+.form-textarea:hover,
+.tutorial-input:hover,
+.search-input:hover,
+.guided-primary-input:hover,
+.guided-evidence textarea:hover,
+.de-input:hover,
+.tax-input:hover {
+  border-color: #b7bdc7;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus,
+.tutorial-input:focus,
+.search-input:focus,
+.guided-primary-input:focus,
+.guided-evidence textarea:focus,
+.de-input:focus,
+.tax-input:focus,
+.guided-input-wrap:focus-within {
+  color: var(--talkdata-text);
+  background: var(--talkdata-white);
+  border-color: var(--talkdata-accent);
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(255, 75, 75, 0.13);
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder,
+.tutorial-input::placeholder,
+.search-input::placeholder,
+.guided-primary-input::placeholder {
+  color: var(--talkdata-subtle);
+}
+
+.btn,
+.step-btn,
+.step-nav-btn,
+.onboarding-btn,
+.search-btn,
+.reset-btn,
+.error-state button,
+.guided-navigation button,
+.guided-review-actions button,
+.guided-result-actions button {
+  min-height: 42px;
+  border-radius: 8px;
+  box-shadow: none;
+  font-weight: 700;
+}
+
+.btn-primary,
+.step-btn.primary,
+.step-nav-btn.next,
+.step-nav-btn.primary,
+.onboarding-btn.primary,
+.search-btn,
+.error-state button,
+.guided-navigation .primary,
+.guided-review-actions .primary,
+.guided-result-actions .primary {
+  color: #fff;
+  background: var(--talkdata-accent);
+  border: 1px solid var(--talkdata-accent);
+  box-shadow: none;
+}
+
+.btn-primary:hover,
+.step-btn.primary:hover,
+.step-nav-btn.next:hover,
+.step-nav-btn.primary:hover,
+.onboarding-btn.primary:hover,
+.search-btn:hover,
+.error-state button:hover,
+.guided-navigation .primary:hover,
+.guided-review-actions .primary:hover,
+.guided-result-actions .primary:hover {
+  color: #fff;
+  background: var(--talkdata-accent-hover);
+  border-color: var(--talkdata-accent-hover);
+  box-shadow: none;
+  transform: none;
+}
+
+.btn-secondary,
+.step-btn.secondary,
+.step-nav-btn.prev,
+.onboarding-btn.secondary,
+.guided-navigation .secondary,
+.guided-review-actions .secondary,
+.guided-result-actions .secondary {
+  color: var(--talkdata-text);
+  background: var(--talkdata-white);
+  border: 1px solid var(--talkdata-border-strong);
+  box-shadow: none;
+}
+
+.btn-secondary:hover,
+.step-btn.secondary:hover,
+.step-nav-btn.prev:hover,
+.onboarding-btn.secondary:hover,
+.guided-navigation .secondary:hover,
+.guided-review-actions .secondary:hover,
+.guided-result-actions .secondary:hover {
+  color: var(--talkdata-text);
+  background: var(--talkdata-surface);
+  border-color: #b7bdc7;
+}
+
+.tabs,
+.internal-tabs,
+.mode-tabs,
+.guided-group-tabs {
+  padding: 3px;
+  gap: 3px;
+  background: var(--talkdata-surface);
+  border: 1px solid var(--talkdata-border);
+  border-radius: 9px;
+}
+
+.tab,
+.internal-tab,
+.mode-tab,
+.guided-group-tabs button {
+  min-height: 38px;
+  color: var(--talkdata-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  box-shadow: none;
+}
+
+.tab:hover,
+.internal-tab:hover,
+.mode-tab:hover,
+.guided-group-tabs button:hover {
+  color: var(--talkdata-text);
+  background: var(--talkdata-white);
+  border: 0;
+}
+
+.tab.active,
+.internal-tab.active,
+.mode-tab.active,
+.guided-group-tabs button.active {
+  color: var(--talkdata-accent);
+  background: var(--talkdata-white);
+  border: 0;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.06);
+}
+
+.guided-dcf {
+  color: var(--talkdata-text);
+  background: var(--talkdata-white);
+}
+
+.guided-progress-shell {
+  padding: 14px 16px;
+}
+
+.guided-progress-topline,
+.guided-product-label,
+.guided-autosave,
+.guided-navigation-hint,
+.guided-optional {
+  color: var(--talkdata-muted);
+}
+
+.guided-progress-track,
+.guided-readiness-track,
+.step-line {
+  background: var(--talkdata-border);
+}
+
+.guided-progress-track > span,
+.guided-readiness-track > span,
+.step-line.done {
+  background: var(--talkdata-accent);
+}
+
+.guided-question-card {
+  padding: clamp(21px, 3vw, 30px);
+}
+
+.guided-question-copy h3,
+.guided-result h3 {
+  color: var(--talkdata-text);
+}
+
+.guided-eyebrow,
+.guided-result-badge,
+.step-label-text {
+  color: var(--talkdata-accent);
+  background: var(--talkdata-accent-soft);
+  border-color: #ffd0d0;
+}
+
+.guided-choice-icon {
+  color: var(--talkdata-accent);
+  background: var(--talkdata-accent-soft);
+}
+
+.guided-evidence,
+.guided-help,
+.guided-readiness,
+.guided-saved-wacc,
+.guided-assumption-list,
+.guided-sensitivity,
+.formula-box,
+.theory-box,
+.forecast-preview,
+.economic-inputs,
+.chart-container,
+.custom-guidance,
+.sensitivity-insight,
+.tree-info,
+.tree-note {
+  color: var(--talkdata-muted);
+  background: var(--talkdata-surface);
+  border: 1px solid var(--talkdata-border);
+  border-radius: 9px;
+  box-shadow: none;
+}
+
+.method-item,
+.industry-item,
+.growth-method-card,
+.wacc-selection-item,
+.beta-method-card,
+.search-result-item,
+.guided-choice,
+.guided-wacc-option {
+  color: var(--talkdata-text);
+  background: var(--talkdata-white);
+  border: 1px solid var(--talkdata-border);
+  border-radius: 9px;
+  box-shadow: none;
+}
+
+.method-item:hover,
+.industry-item:hover,
+.growth-method-card:hover,
+.wacc-selection-item:hover,
+.beta-method-card:hover,
+.search-result-item:hover,
+.guided-choice:hover,
+.guided-wacc-option:hover {
+  color: var(--talkdata-text);
+  background: var(--talkdata-accent-faint);
+  border-color: #ffadad;
+  box-shadow: none;
+  transform: none;
+}
+
+.method-item.selected,
+.industry-item.selected,
+.growth-method-card.selected,
+.wacc-selection-item.selected,
+.beta-method-card.selected,
+.search-result-item.selected,
+.guided-choice.selected,
+.guided-wacc-option.selected {
+  color: var(--talkdata-text);
+  background: var(--talkdata-accent-soft);
+  border: 1px solid var(--talkdata-accent);
+  box-shadow: 0 0 0 2px rgba(255, 75, 75, 0.09);
+}
+
+.step-dot.active,
+.step-number.active,
+.step-item.active .step-number,
+.step-indicator .step-dot.active,
+.step-indicator .step-dot.completed,
+.step-indicator .step-dot.done {
+  color: #fff;
+  background: var(--talkdata-accent);
+  border-color: var(--talkdata-accent);
+  box-shadow: none;
+}
+
+.result-box,
+.ev-result-box,
+.growth-result-display,
+.guided-result-hero,
+.info-card,
+.theory-box:not(.important) {
+  color: var(--talkdata-text);
+  background: var(--talkdata-info);
+  border-color: var(--talkdata-info-border);
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+.result-value,
+.ev-value,
+.wacc-result-big,
+.wacc-value,
+.final-value,
+.ke-value,
+.guided-result-hero strong,
+.beta-number.primary,
+.result-value-large .value {
+  color: var(--talkdata-text);
+  background: none;
+  font-variant-numeric: tabular-nums;
+  -webkit-text-fill-color: currentColor;
+}
+
+.formula-box,
+.formula-display,
+.calc-formula,
+.intermediate-value,
+.industry-beta {
+  color: var(--talkdata-accent);
+}
+
+.cf-table-container,
+.sensitivity-table-container,
+.guided-table-wrap {
+  overflow: auto;
+  background: var(--talkdata-white);
+  border: 1px solid var(--talkdata-border);
+  border-radius: 9px;
+}
+
+.cf-table th,
+.sensitivity-table th,
+.guided-fcff-table th {
+  color: var(--talkdata-muted);
+  background: var(--talkdata-surface);
+  border-color: var(--talkdata-border);
+}
+
+.cf-table td,
+.sensitivity-table td,
+.guided-fcff-table td {
+  color: var(--talkdata-text);
+  background: var(--talkdata-white);
+  border-color: var(--talkdata-border);
+}
+
+.sensitivity-table th.highlight,
+.sensitivity-table td.highlight,
+.sensitivity-table td.center,
+.cf-table .total-row td,
+.guided-fcff-table td.highlight,
+.guided-sensitivity td.base {
+  color: var(--talkdata-accent);
+  background: var(--talkdata-accent-soft);
+  box-shadow: none;
+}
+
+.warning-card,
+.guided-message.warning,
+.theory-box.important,
+.insight-box.warning {
+  color: #713f12;
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.guided-message:not(:empty),
+.tutorial-tip,
+.completion-checklist,
+.wacc-explanation {
+  border-radius: 9px;
+  box-shadow: none;
+}
+
+.onboarding-backdrop {
+  background: rgba(17, 24, 39, 0.48);
+  backdrop-filter: blur(3px);
+}
+
+.onboarding-modal {
+  color: var(--talkdata-text);
+  background: var(--talkdata-white);
+  border: 1px solid var(--talkdata-border);
+  border-radius: 12px;
+  box-shadow: 0 20px 45px rgba(17, 24, 39, 0.16);
+}
+
+.onboarding-title {
+  color: var(--talkdata-text);
+  background: none;
+  -webkit-text-fill-color: currentColor;
+}
+
+.help-button {
+  color: #fff;
+  background: var(--talkdata-accent);
+  border: 1px solid var(--talkdata-accent);
+  box-shadow: 0 5px 14px rgba(17, 24, 39, 0.12);
+}
+
+.help-button:hover {
+  color: #fff;
+  background: var(--talkdata-accent-hover);
+  border-color: var(--talkdata-accent-hover);
+  box-shadow: 0 6px 16px rgba(17, 24, 39, 0.14);
+  transform: none;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Responsive                                                                  */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 980px) {
+  .talkdata-main {
+    padding-right: 28px;
+    padding-left: 28px;
+  }
+
+  .talkdata-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .home-dashboard {
+    overflow-y: auto;
+  }
+
+  .home-dashboard-inner.talkdata-home,
+  .talkdata-home {
+    display: block;
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+  }
+
+  .talkdata-sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: 10px 14px 9px;
+    overflow: visible;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.97);
+    border-right: 0;
+    border-bottom: 1px solid var(--talkdata-border);
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 12px;
+  }
+
+  .talkdata-sidebar-brand {
+    min-width: 0;
+    padding: 0;
+  }
+
+  .talkdata-workspace-card,
+  .talkdata-divider,
+  .talkdata-side-status {
+    display: none;
+  }
+
+  .talkdata-new-analysis {
+    width: auto;
+    min-height: 36px;
+    margin: 0;
+    padding: 7px 11px;
+  }
+
+  .talkdata-menu {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    margin: 0 -2px;
+    overflow: visible;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 3px;
+  }
+
+  .talkdata-menu :where(a, button) {
+    width: 100%;
+    min-width: 0;
+    min-height: 34px;
+    padding: 7px 4px;
+    justify-content: center;
+    gap: 4px;
+    font-size: 0.61rem;
+    white-space: nowrap;
+  }
+
+  .talkdata-main {
+    min-height: 0;
+    padding: 23px 16px 34px;
+    overflow: visible;
+  }
+
+  .talkdata-intro {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .talkdata-intro h1,
+  .talkdata-intro h2 {
+    font-size: clamp(1.45rem, 8vw, 1.8rem);
+  }
+
+  .talkdata-command {
+    margin-top: 17px;
+  }
+
+  .talkdata-overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .talkdata-progress-card,
+  .talkdata-route-card {
+    min-height: 0;
+  }
+
+  .app:not(.home-dashboard-mode) {
+    display: block;
+  }
+
+  .app:not(.home-dashboard-mode) .sidebar {
+    position: fixed;
+    z-index: 1100;
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    left: 8px;
+    display: block;
+    width: auto;
+    min-width: 0;
+    height: 66px;
+    padding: 5px 7px;
+    overflow: visible;
+    background: var(--talkdata-white);
+    border: 1px solid var(--talkdata-border);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(17, 24, 39, 0.12);
+    backdrop-filter: none;
+  }
+
+  .app:not(.home-dashboard-mode) .main-content {
+    width: 100%;
+    height: 100dvh;
+    padding-bottom: calc(78px + env(safe-area-inset-bottom));
+  }
+
+  .nav-item,
+  .home-nav-item {
+    min-height: 54px;
+    color: var(--talkdata-muted);
+    border-radius: 8px;
+  }
+
+  .nav-item.active,
+  .home-nav-item.active {
+    color: var(--talkdata-accent);
+    background: var(--talkdata-accent-soft);
+  }
+
+  .main-header {
+    padding: 19px 16px 12px;
+  }
+
+  .method-tabs {
+    margin: 0 16px 10px;
+  }
+
+  .content-area {
+    padding: 7px 16px 26px;
+  }
+}
+
+@media (max-width: 480px) {
+  .talkdata-sidebar-brand > :first-child {
+    flex-basis: 26px;
+    width: 26px;
+    height: 26px;
+  }
+
+  .talkdata-sidebar-brand strong {
+    font-size: 0.84rem;
+  }
+
+  .talkdata-new-analysis {
+    font-size: 0.67rem;
+  }
+
+  .talkdata-command {
+    min-height: 48px;
+    padding-left: 12px;
+  }
+
+  .talkdata-next-step {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 16px;
+  }
+
+  .talkdata-next-step > .talkdata-command-icon {
+    display: none;
+  }
+
+  .talkdata-next-step > button {
+    width: 100%;
+    min-height: 40px;
+  }
+
+  .talkdata-command > :last-child:is(kbd, strong) {
+    display: none;
+  }
+
+  .talkdata-tabs {
+    gap: 17px;
+  }
+
+  .talkdata-metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .talkdata-metric-card {
+    min-height: 82px;
+  }
+
+  .talkdata-route-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .talkdata-menu {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .talkdata-menu :where(a, button) {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 360px) {
+  .talkdata-menu {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* The legacy mobile navigation must never reappear above the custom home. */
+body #root .app.home-dashboard-mode > .sidebar,
+body #root .app.home-dashboard-mode > .help-button {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

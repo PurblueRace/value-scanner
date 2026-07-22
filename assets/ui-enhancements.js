@@ -17,7 +17,7 @@
   const nativeInteractive = "button, a, input, select, textarea";
 
   const shortNavLabel = (label) => {
-    if (label.includes("WACC")) return "분석";
+    if (label.includes("WACC")) return "WACC";
     if (label.includes("DCF")) return "DCF";
     if (label.includes("멀티플")) return "멀티플";
     if (

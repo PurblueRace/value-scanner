@@ -6,6 +6,19 @@
   const TOTAL_QUESTIONS = 15;
   const RESULT_STEP = TOTAL_QUESTIONS;
   const WACC_API = "http://localhost:3001/api/wacc";
+  const WACC_CHANGED_EVENT = "value-scanner:wacc-changed";
+  const OFFLINE_WACC_STORAGE_KEY = "value-scanner:wacc-records:v1";
+
+  const waccMethodLabels = Object.freeze({
+    industry: "순수접근법",
+    regression: "회귀분석법",
+    direct: "펀더멘털 베타",
+    levered: "유사기업 비교법",
+    "pure-play": "순수접근법",
+    pureplay: "순수접근법",
+    capm: "펀더멘털 베타",
+    manual: "직접 입력",
+  });
 
   const groups = [
     { label: "기준정보", start: 0, end: 3 },
@@ -14,6 +27,15 @@
     { label: "영구가치", start: 11, end: 14 },
     { label: "최종검토", start: 14, end: 15 },
   ];
+
+  const reviewGroups = [
+    { label: "기준정보", description: "평가 목적과 기준일, 적용 할인율이 서로 같은 시점을 기준으로 하는지 확인하세요." },
+    { label: "영업예측", description: "예측기간과 매출·수익성 가정이 승인된 사업계획과 이어지는지 확인하세요." },
+    { label: "재투자", description: "세금과 감가상각, CAPEX, 운전자본 가정이 현금흐름에서 일관되게 연결되는지 확인하세요." },
+    { label: "영구가치", description: "영구성장 기준과 성장률이 WACC 및 장기 경제전망과 맞는지 마지막으로 확인하세요." },
+  ];
+
+  const resultPanels = ["요약", "현금흐름", "민감도", "체크"];
 
   const evidenceKeys = [
     "wacc",
@@ -38,6 +60,7 @@
     purpose: "internal",
     valuationDate: today(),
     wacc: 10,
+    waccMode: null,
     waccSnapshot: null,
     forecastYears: 5,
     revenue: 1000,
@@ -51,15 +74,17 @@
     terminalGrowth: 2,
     evidence: {},
     lastVersion: null,
+    reviewPage: 0,
+    resultPage: 0,
   });
 
   const escapeHtml = (value) =>
     String(value ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
 
   const finiteNumber = (value) => {
     if (value === "" || value === null || value === undefined) return null;
@@ -74,6 +99,22 @@
       const merged = { ...createDefaultState(), ...saved };
       merged.evidence = saved.evidence && typeof saved.evidence === "object" ? saved.evidence : {};
       merged.step = Math.min(Math.max(Number(saved.step) || 0, 0), RESULT_STEP);
+      merged.reviewPage = Math.min(
+        Math.max(Math.trunc(Number(saved.reviewPage) || 0), 0),
+        reviewGroups.length - 1,
+      );
+      merged.resultPage = Math.min(
+        Math.max(Math.trunc(Number(saved.resultPage) || 0), 0),
+        resultPanels.length - 1,
+      );
+      if (!Object.prototype.hasOwnProperty.call(saved, "waccMode")) {
+        // Drafts created before the guided chooser existed used either a snapshot
+        // or a manually entered number. Preserve those drafts without making a
+        // brand-new analysis silently accept the default 10% value.
+        merged.waccMode = saved.waccSnapshot ? "saved" : "manual";
+      } else if (saved.waccMode !== "saved" && saved.waccMode !== "manual") {
+        merged.waccMode = null;
+      }
       return merged;
     } catch {
       return createDefaultState();
@@ -83,7 +124,11 @@
   let state = loadState();
   let guidedRoot = null;
   let savedWaccRows = [];
-  let waccLoadStarted = false;
+  let waccLoadStatus = "idle";
+  let waccLoadPromise = null;
+  let waccReloadQueued = false;
+  let waccResetBrowseQueued = false;
+  let waccBrowseIndex = 0;
   let syncQueued = false;
 
   const saveState = () => {
@@ -98,6 +143,20 @@
     new Intl.NumberFormat("ko-KR", { maximumFractionDigits }).format(Number(value) || 0);
 
   const formatPercent = (value) => `${formatNumber(value, 2)}%`;
+
+  const waccMethodLabel = (method) =>
+    waccMethodLabels[String(method || "industry").toLowerCase()] || "기타 산정법";
+
+  const formatSavedWaccDate = (value) => {
+    if (!value) return "저장일 정보 없음";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "저장일 정보 없음";
+    return new Intl.DateTimeFormat("ko-KR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(date);
+  };
 
   const purposeLabel = (purpose) =>
     ({
@@ -193,7 +252,7 @@
       (sum, cashFlow) => sum + cashFlow.presentValue,
       0,
     );
-    const lastFcff = cashFlows.at(-1)?.fcff || 0;
+    const lastFcff = cashFlows[cashFlows.length - 1]?.fcff || 0;
     const terminalFcff = lastFcff * (1 + terminalGrowth);
     const terminalValue = terminalFcff / (wacc - terminalGrowth);
     const terminalPresentValue = terminalValue / (1 + wacc) ** years;
@@ -228,7 +287,11 @@
           result.warning = "평가 기준일이 오늘보다 미래입니다. 기준 자료의 시점을 다시 확인해 주세요.";
         break;
       case 2:
-        if (number("wacc") === null || number("wacc") <= 0 || number("wacc") >= 100)
+        if (state.waccMode !== "saved" && state.waccMode !== "manual")
+          result.error = "저장된 WACC을 가져올지, 직접 입력할지 먼저 선택해 주세요.";
+        else if (state.waccMode === "saved" && !state.waccSnapshot)
+          result.error = "사용할 저장 WACC을 한 개 선택해 주세요.";
+        else if (number("wacc") === null || number("wacc") <= 0 || number("wacc") >= 100)
           result.error = "WACC은 0%보다 크고 100%보다 작아야 합니다.";
         else if (number("wacc") < 3 || number("wacc") > 30)
           result.warning = "일반적인 범위를 크게 벗어났습니다. 산출 근거를 꼭 남겨 주세요.";
@@ -516,71 +579,164 @@
     </section>
   `;
 
+  const renderWaccModeChooser = () => `
+    <div class="guided-choice-grid">
+      <button type="button" class="guided-choice" data-wacc-mode="saved">
+        <span class="guided-choice-icon">↙</span>
+        <span class="guided-choice-copy">
+          <strong>저장된 WACC 가져오기</strong>
+          <small>WACC 계산하기에서 저장한 결과를 한 개씩 확인하고 선택합니다.</small>
+        </span>
+      </button>
+      <button type="button" class="guided-choice" data-wacc-mode="manual">
+        <span class="guided-choice-icon">✎</span>
+        <span class="guided-choice-copy">
+          <strong>직접 입력</strong>
+          <small>외부에서 검토한 할인율과 산출 근거를 직접 입력합니다.</small>
+        </span>
+      </button>
+    </div>
+  `;
+
+  const renderNoSavedWacc = () => `
+    <div class="guided-saved-wacc">
+      <div class="guided-message ${waccLoadStatus === "error" ? "warning" : ""}">
+        <strong>${waccLoadStatus === "error" ? "저장 목록을 불러오지 못했어요." : "저장된 WACC이 아직 없어요."}</strong>
+        <p>${
+          waccLoadStatus === "error"
+            ? "연결 상태를 확인한 뒤 다시 불러오거나, 다른 방법을 선택해 주세요."
+            : "먼저 WACC을 계산해 저장하면 이곳에서 그대로 가져올 수 있어요."
+        }</p>
+      </div>
+      <div class="guided-review-actions">
+        <button type="button" class="primary" data-go-wacc>WACC 계산하러 가기</button>
+        <button type="button" data-wacc-refresh>다시 불러오기</button>
+        <button type="button" data-wacc-mode="manual">직접 입력 선택</button>
+      </div>
+    </div>
+  `;
+
   const renderSavedWacc = () => {
-    if (!savedWaccRows.length) return "";
+    if (waccLoadStatus === "loading" && !savedWaccRows.length) {
+      return '<div class="guided-message">저장된 WACC을 확인하고 있어요…</div>';
+    }
+
+    if (!savedWaccRows.length) return renderNoSavedWacc();
+
+    if (state.waccSnapshot) {
+      const selected = state.waccSnapshot;
+      return `
+        <div class="guided-saved-wacc">
+          <span class="guided-field-label">DCF에 적용할 WACC</span>
+          <div class="guided-wacc-option selected">
+            <span>
+              <strong>${escapeHtml(selected.name)}</strong>
+              <small>${escapeHtml(waccMethodLabel(selected.method))} · ${escapeHtml(formatSavedWaccDate(selected.createdAt))}</small>
+            </span>
+            <b>${formatPercent(selected.wacc)}</b>
+          </div>
+          <div class="guided-message success">이 값을 DCF 할인율로 사용합니다.</div>
+          <div class="guided-review-actions">
+            <button type="button" data-wacc-change>다른 저장값 선택</button>
+            <button type="button" data-wacc-refresh>목록 새로고침</button>
+          </div>
+        </div>
+      `;
+    }
+
+    const safeIndex = Math.min(Math.max(waccBrowseIndex, 0), savedWaccRows.length - 1);
+    const row = savedWaccRows[safeIndex];
+    waccBrowseIndex = safeIndex;
     return `
       <div class="guided-saved-wacc">
-        <span class="guided-field-label">저장된 WACC</span>
-        <div class="guided-wacc-list">
-          ${savedWaccRows
-            .map(
-              (row) => `
-                <button
-                  type="button"
-                  class="guided-wacc-option ${state.waccSnapshot?.id === row.id ? "selected" : ""}"
-                  data-wacc-id="${escapeHtml(row.id)}"
-                >
-                  <span>
-                    <strong>${escapeHtml(row.name)}</strong>
-                    <small>${escapeHtml(row.method === "regression" ? "회귀분석" : "업종 베타")}</small>
-                  </span>
-                  <b>${formatPercent(row.wacc)}</b>
-                </button>
-              `,
-            )
-            .join("")}
+        <div class="guided-progress-topline">
+          <span class="guided-field-label">저장값 ${safeIndex + 1} / ${savedWaccRows.length}</span>
+          <button type="button" data-wacc-refresh>목록 새로고침</button>
         </div>
+        <div class="guided-wacc-option">
+          <span>
+            <strong>${escapeHtml(row.name)}</strong>
+            <small>${escapeHtml(waccMethodLabel(row.method))} · ${escapeHtml(formatSavedWaccDate(row.createdAt))}</small>
+          </span>
+          <b>${formatPercent(row.wacc)}</b>
+        </div>
+        <div class="guided-review-actions">
+          <button type="button" data-wacc-browse="previous" ${safeIndex === 0 ? "disabled" : ""}>← 이전 저장값</button>
+          <button type="button" class="primary" data-wacc-id="${escapeHtml(row.id)}">이 WACC 사용하기</button>
+          <button type="button" data-wacc-browse="next" ${safeIndex === savedWaccRows.length - 1 ? "disabled" : ""}>다음 저장값 →</button>
+        </div>
+        <button type="button" class="secondary" data-wacc-mode="manual">저장값 대신 직접 입력</button>
       </div>
     `;
   };
 
-  const renderWaccStep = () => `
-    <section class="guided-question-card" aria-labelledby="guided-question-title">
-      <div class="guided-question-copy">
-        <span class="guided-eyebrow">할인율</span>
-        <h3 id="guided-question-title">미래 현금흐름을 몇 %로 할인할까요?</h3>
-        <p>앞에서 계산한 WACC이 있으면 선택하고, 없다면 근거와 함께 직접 입력하세요.</p>
+  const renderManualWacc = () => `
+    <div class="guided-primary-input">
+      <label class="guided-field-label" for="guided-wacc">검토한 WACC을 입력해 주세요</label>
+      <div class="guided-input-wrap">
+        <input
+          id="guided-wacc"
+          data-field="wacc"
+          type="number"
+          inputmode="decimal"
+          value="${escapeHtml(state.wacc)}"
+          min="0.1"
+          max="99.9"
+          step="0.1"
+          aria-describedby="guided-validation"
+        />
+        <span>%</span>
       </div>
-      ${renderSavedWacc()}
-      <div class="guided-primary-input">
-        <label class="guided-field-label" for="guided-wacc">WACC 직접 입력</label>
-        <div class="guided-input-wrap">
-          <input
-            id="guided-wacc"
-            data-field="wacc"
-            type="number"
-            inputmode="decimal"
-            value="${escapeHtml(state.wacc)}"
-            min="0.1"
-            max="99.9"
-            step="0.1"
-            aria-describedby="guided-validation"
-          />
-          <span>%</span>
-        </div>
-      </div>
-      <div id="guided-validation" data-validation>${renderValidation(2)}</div>
-      <div class="guided-audit-tip">
-        <span>감사 대응 팁</span>
-        <p>베타·무위험수익률·시장위험프리미엄·목표 자본구조의 기준일과 출처를 함께 보관하세요.</p>
-      </div>
-      ${renderWhereToFind(
-        "WACC은 어디서 가져오나요?",
-        "왼쪽의 WACC 산출 메뉴에서 비교기업 기반 베타와 자본구조를 사용해 계산할 수 있습니다. 현금흐름에 반영한 위험을 할인율에 다시 더하지 마세요.",
-      )}
-      ${renderEvidence("wacc", "예: 2026.07.20 Bloomberg 5Y Weekly adjusted beta, 비교기업 6개 중위값")}
-    </section>
+      <button type="button" class="secondary" data-wacc-mode="saved">저장된 WACC 가져오기로 변경</button>
+    </div>
   `;
+
+  const renderWaccStep = () => {
+    const choosingMode = state.waccMode !== "saved" && state.waccMode !== "manual";
+    const title = choosingMode
+      ? "WACC을 어떻게 준비할까요?"
+      : state.waccMode === "saved"
+        ? "저장한 WACC 중 어떤 값을 사용할까요?"
+        : "DCF에 사용할 WACC은 몇 %인가요?";
+    const description = choosingMode
+      ? "한 가지 방법을 먼저 선택하면 다음 화면에서 필요한 내용만 보여드릴게요."
+      : state.waccMode === "saved"
+        ? "한 번에 한 저장값씩 확인한 뒤 사용할 값을 확정해 주세요."
+        : "검토가 끝난 할인율을 입력하고 산출 근거를 함께 남겨 주세요.";
+
+    return `
+      <section class="guided-question-card" aria-labelledby="guided-question-title">
+        <div class="guided-question-copy">
+          <span class="guided-eyebrow">할인율</span>
+          <h3 id="guided-question-title">${title}</h3>
+          <p>${description}</p>
+        </div>
+        ${
+          choosingMode
+            ? renderWaccModeChooser()
+            : state.waccMode === "saved"
+              ? renderSavedWacc()
+              : renderManualWacc()
+        }
+        <div id="guided-validation" data-validation>${renderValidation(2)}</div>
+        ${
+          choosingMode
+            ? ""
+            : `
+              <div class="guided-audit-tip">
+                <span>감사 대응 팁</span>
+                <p>베타·무위험수익률·시장위험프리미엄·목표 자본구조의 기준일과 출처를 함께 보관하세요.</p>
+              </div>
+              ${renderWhereToFind(
+                "WACC은 어디서 가져오나요?",
+                "왼쪽의 WACC 계산하기에서 목적에 맞는 방법으로 계산할 수 있습니다. 현금흐름에 반영한 위험을 할인율에 다시 더하지 마세요.",
+              )}
+              ${renderEvidence("wacc", "예: 2026.07.20 Bloomberg 5Y Weekly adjusted beta, 비교기업 6개 중위값")}
+            `
+        }
+      </section>
+    `;
+  };
 
   const renderFcffReview = () => {
     const result = computeDcf();
@@ -691,45 +847,62 @@
     `;
   };
 
-  const assumptionRows = () => [
-    ["평가 목적", purposeLabel(state.purpose), 0],
-    ["평가 기준일", state.valuationDate, 1],
-    ["WACC", formatPercent(state.wacc), 2],
-    ["상세 예측기간", `${formatNumber(state.forecastYears)}년`, 3],
-    ["기준연도 매출", `${formatNumber(state.revenue)}억원`, 4],
-    ["연평균 매출 성장률", formatPercent(state.revenueGrowth), 5],
-    ["EBIT Margin", formatPercent(state.ebitMargin), 6],
-    ["법인세율", formatPercent(state.taxRate), 7],
-    ["D&A / 매출", formatPercent(state.depreciationRate), 8],
-    ["CAPEX / 매출", formatPercent(state.capexRate), 9],
-    ["NWC / 매출", formatPercent(state.nwcRate), 10],
-    ["영구성장 기준", terminalBasisLabel(state.terminalBasis), 12],
-    ["영구성장률", formatPercent(state.terminalGrowth), 13],
+  const assumptionGroups = () => [
+    [
+      ["평가 목적", purposeLabel(state.purpose), 0],
+      ["평가 기준일", state.valuationDate, 1],
+      [
+        "WACC",
+        `${formatPercent(state.wacc)}${state.waccSnapshot ? ` · ${waccMethodLabel(state.waccSnapshot.method)}` : " · 직접 입력"}`,
+        2,
+      ],
+    ],
+    [
+      ["상세 예측기간", `${formatNumber(state.forecastYears)}년`, 3],
+      ["기준연도 매출", `${formatNumber(state.revenue)}억원`, 4],
+      ["연평균 매출 성장률", formatPercent(state.revenueGrowth), 5],
+      ["EBIT Margin", formatPercent(state.ebitMargin), 6],
+    ],
+    [
+      ["법인세율", formatPercent(state.taxRate), 7],
+      ["D&A / 매출", formatPercent(state.depreciationRate), 8],
+      ["CAPEX / 매출", formatPercent(state.capexRate), 9],
+      ["NWC / 매출", formatPercent(state.nwcRate), 10],
+    ],
+    [
+      ["영구성장 기준", terminalBasisLabel(state.terminalBasis), 12],
+      ["영구성장률", formatPercent(state.terminalGrowth), 13],
+    ],
   ];
 
   const renderFinalReview = () => {
     const auditReadiness = readiness();
     const valid = allAssumptionsValid();
+    const page = Math.min(Math.max(state.reviewPage, 0), reviewGroups.length - 1);
+    const group = reviewGroups[page];
+    const rows = assumptionGroups()[page];
+    const isLastPage = page === reviewGroups.length - 1;
 
     return `
       <section class="guided-question-card wide" aria-labelledby="guided-question-title">
         <div class="guided-question-copy">
-          <span class="guided-eyebrow">최종 검토</span>
-          <h3 id="guided-question-title">이 가정으로 DCF를 계산할까요?</h3>
-          <p>숫자보다 먼저 기준일, 출처, 현금흐름과 할인율의 일관성을 확인하세요.</p>
+          <span class="guided-eyebrow">최종 검토 · ${page + 1}/${reviewGroups.length}</span>
+          <h3 id="guided-question-title">${escapeHtml(group.label)} 가정을 확인해 주세요</h3>
+          <p>${escapeHtml(group.description)}</p>
         </div>
-        <div class="guided-readiness">
-          <div>
-            <span>감사 준비도</span>
-            <strong>${auditReadiness.completed}/${auditReadiness.total}</strong>
-          </div>
-          <div class="guided-readiness-track">
-            <span style="width:${auditReadiness.percent}%"></span>
-          </div>
-          <small>핵심 가정에 근거 메모를 남긴 수입니다. 감사 승인 여부를 의미하지 않습니다.</small>
+        <div class="guided-group-tabs" aria-label="최종 검토 묶음">
+          ${reviewGroups
+            .map(
+              (item, index) => `
+                <span class="${index === page ? "active" : ""} ${index < page ? "done" : ""}">
+                  ${index < page ? "✓ " : ""}${escapeHtml(item.label)}
+                </span>
+              `,
+            )
+            .join("")}
         </div>
         <div class="guided-assumption-list">
-          ${assumptionRows()
+          ${rows
             .map(
               ([label, value, step]) => `
                 <div class="guided-assumption-row">
@@ -741,11 +914,35 @@
             )
             .join("")}
         </div>
-        <div data-validation>
+        ${
+          isLastPage
+            ? `
+              <div class="guided-readiness">
+                <div>
+                  <span>근거 메모</span>
+                  <strong>${auditReadiness.completed}/${auditReadiness.total}</strong>
+                </div>
+                <div class="guided-readiness-track">
+                  <span style="width:${auditReadiness.percent}%"></span>
+                </div>
+                <small>핵심 가정에 근거 메모를 남긴 수입니다. 감사 승인 여부를 의미하지 않습니다.</small>
+              </div>
+              <div data-validation>
+                ${
+                  valid
+                    ? '<div class="guided-message success">네 묶음의 검토가 끝났습니다. 이제 계산할 수 있어요.</div>'
+                    : '<div class="guided-message error">일부 가정이 유효하지 않습니다. 표시된 항목을 수정해 주세요.</div>'
+                }
+              </div>
+            `
+            : '<div class="guided-message">이 묶음을 확인했으면 다음 묶음으로 이동해 주세요.</div>'
+        }
+        <div class="guided-review-actions">
+          <button type="button" data-review-page="${page - 1}" ${page === 0 ? "disabled" : ""}>← 이전 묶음</button>
           ${
-            valid
-              ? '<div class="guided-message success">계산 준비가 완료됐습니다.</div>'
-              : '<div class="guided-message error">일부 가정이 유효하지 않습니다. 표시된 항목을 수정해 주세요.</div>'
+            isLastPage
+              ? ""
+              : `<button type="button" class="primary" data-review-page="${page + 1}">다음 묶음: ${escapeHtml(reviewGroups[page + 1].label)} →</button>`
           }
         </div>
       </section>
@@ -796,6 +993,104 @@
     `;
   };
 
+  const renderResultSummary = (result) => `
+    <div class="guided-result-hero">
+      <div>
+        <span class="guided-eyebrow">DCF 결과 · 버전 ${escapeHtml(state.lastVersion || 1)}</span>
+        <h3 id="guided-result-title">추정 기업가치</h3>
+        <strong>${formatNumber(result.enterpriseValue)}<small>억원</small></strong>
+        <p>${escapeHtml(purposeLabel(state.purpose))} · 기준일 ${escapeHtml(state.valuationDate)}</p>
+      </div>
+      <div class="guided-result-badge">WACC ${formatPercent(result.wacc)}</div>
+    </div>
+    <div class="guided-result-grid">
+      <article>
+        <span>예측기간 현재가치</span>
+        <strong>${formatNumber(result.forecastPresentValue)}</strong>
+        <small>억원</small>
+      </article>
+      <article>
+        <span>영구가치 현재가치</span>
+        <strong>${formatNumber(result.terminalPresentValue)}</strong>
+        <small>억원</small>
+      </article>
+      <article>
+        <span>영구가치 비중</span>
+        <strong>${formatNumber(result.terminalShare, 1)}%</strong>
+        <small>${result.terminalShare > 75 ? "민감도 확인 필요" : "일반 검토 범위"}</small>
+      </article>
+    </div>
+    ${
+      result.terminalShare > 75
+        ? '<div class="guided-message warning">기업가치의 75% 이상이 영구가치에서 나옵니다. 뒤의 민감도 패널에서 영향을 꼭 확인하세요.</div>'
+        : '<div class="guided-message success">상세 예측기간과 영구가치의 연결이 계산됐습니다.</div>'
+    }
+  `;
+
+  const renderResultCashFlows = (result) => `
+    <div class="guided-question-copy">
+      <span class="guided-eyebrow">결과 · 2/4</span>
+      <h3 id="guided-result-title">연도별 현금흐름을 확인해 주세요</h3>
+      <p>매출에서 만들어진 FCFF와 현재가치가 예상한 방향으로 움직이는지 확인하세요.</p>
+    </div>
+    <div class="guided-table-wrap result-table">
+      <table class="guided-fcff-table">
+        <thead>
+          <tr>
+            <th>연도</th>
+            <th>매출액</th>
+            <th>FCFF</th>
+            <th>FCFF 현재가치</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${result.cashFlows
+            .map(
+              (cashFlow) => `
+                <tr>
+                  <td>${cashFlow.year}년차</td>
+                  <td>${formatNumber(cashFlow.revenue)}</td>
+                  <td>${formatNumber(cashFlow.fcff)}</td>
+                  <td class="highlight">${formatNumber(cashFlow.presentValue)}</td>
+                </tr>
+              `,
+            )
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  const renderResultSensitivityPanel = (result) => `
+    <div class="guided-question-copy">
+      <span class="guided-eyebrow">결과 · 3/4</span>
+      <h3 id="guided-result-title">할인율과 성장률 변화도 확인해 주세요</h3>
+      <p>기준값 주변에서 기업가치가 얼마나 달라지는지 보고 특정 가정에 지나치게 의존하지 않는지 점검하세요.</p>
+    </div>
+    ${renderSensitivity(result)}
+  `;
+
+  const renderResultChecklist = (result) => {
+    const auditReadiness = readiness();
+    return `
+      <div class="guided-question-copy">
+        <span class="guided-eyebrow">결과 · 4/4</span>
+        <h3 id="guided-result-title">마지막 검토 항목입니다</h3>
+        <p>결과를 공유하기 전에 아래 네 가지를 문서와 다시 대조해 주세요.</p>
+      </div>
+      <div class="guided-assumption-list">
+        <div class="guided-assumption-row"><span>기준일 일치</span><strong>${escapeHtml(state.valuationDate)}</strong></div>
+        <div class="guided-assumption-row"><span>WACC 근거</span><strong>${escapeHtml(state.waccSnapshot?.name || "직접 입력값")}</strong></div>
+        <div class="guided-assumption-row"><span>핵심 가정 근거 메모</span><strong>${auditReadiness.completed}/${auditReadiness.total}</strong></div>
+        <div class="guided-assumption-row"><span>영구가치 비중</span><strong>${formatNumber(result.terminalShare, 1)}%</strong></div>
+      </div>
+      <div class="guided-result-note">
+        <strong>감사 검토용 체크</strong>
+        <p>전기 예측 대비 실제 실적, 비교기업·WACC 기준일, 영구성장률 근거, 현금흐름과 할인율의 위험 중복을 별도 확인하세요.</p>
+      </div>
+    `;
+  };
+
   const renderResult = () => {
     const result = computeDcf();
     if (!result) {
@@ -806,79 +1101,38 @@
       `;
     }
 
+    const page = Math.min(Math.max(state.resultPage, 0), resultPanels.length - 1);
+    const panels = [
+      () => renderResultSummary(result),
+      () => renderResultCashFlows(result),
+      () => renderResultSensitivityPanel(result),
+      () => renderResultChecklist(result),
+    ];
+
     return `
       <section class="guided-result" aria-labelledby="guided-result-title">
-        <div class="guided-result-hero">
-          <div>
-            <span class="guided-eyebrow">DCF 결과 · 버전 ${escapeHtml(state.lastVersion || 1)}</span>
-            <h3 id="guided-result-title">추정 기업가치</h3>
-            <strong>${formatNumber(result.enterpriseValue)}<small>억원</small></strong>
-            <p>${escapeHtml(purposeLabel(state.purpose))} · 기준일 ${escapeHtml(state.valuationDate)}</p>
-          </div>
-          <div class="guided-result-badge">WACC ${formatPercent(result.wacc)}</div>
+        <div class="guided-group-tabs" aria-label="DCF 결과 확인 순서">
+          ${resultPanels
+            .map(
+              (label, index) => `
+                <span class="${index === page ? "active" : ""} ${index < page ? "done" : ""}">
+                  ${index < page ? "✓ " : ""}${escapeHtml(label)}
+                </span>
+              `,
+            )
+            .join("")}
         </div>
-
-        <div class="guided-result-grid">
-          <article>
-            <span>예측기간 현재가치</span>
-            <strong>${formatNumber(result.forecastPresentValue)}</strong>
-            <small>억원</small>
-          </article>
-          <article>
-            <span>영구가치 현재가치</span>
-            <strong>${formatNumber(result.terminalPresentValue)}</strong>
-            <small>억원</small>
-          </article>
-          <article>
-            <span>영구가치 비중</span>
-            <strong>${formatNumber(result.terminalShare, 1)}%</strong>
-            <small>${result.terminalShare > 75 ? "가정 민감도 확인 필요" : "일반 검토 범위"}</small>
-          </article>
-        </div>
-
-        ${
-          result.terminalShare > 75
-            ? '<div class="guided-message warning">기업가치의 75% 이상이 영구가치에서 나옵니다. WACC과 영구성장률 민감도를 중점 검토하세요.</div>'
-            : '<div class="guided-message success">상세 예측기간과 영구가치의 연결이 계산됐습니다.</div>'
-        }
-
-        <div class="guided-table-wrap result-table">
-          <table class="guided-fcff-table">
-            <thead>
-              <tr>
-                <th>연도</th>
-                <th>매출액</th>
-                <th>FCFF</th>
-                <th>FCFF 현재가치</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${result.cashFlows
-                .map(
-                  (cashFlow) => `
-                    <tr>
-                      <td>${cashFlow.year}년차</td>
-                      <td>${formatNumber(cashFlow.revenue)}</td>
-                      <td>${formatNumber(cashFlow.fcff)}</td>
-                      <td class="highlight">${formatNumber(cashFlow.presentValue)}</td>
-                    </tr>
-                  `,
-                )
-                .join("")}
-            </tbody>
-          </table>
-        </div>
-
-        ${renderSensitivity(result)}
-
-        <div class="guided-result-note">
-          <strong>감사 검토용 체크</strong>
-          <p>전기 예측 대비 실제 실적, 비교기업·WACC 기준일, 영구성장률 근거, 현금흐름과 할인율의 위험 중복을 별도 확인하세요.</p>
-        </div>
-
+        ${panels[page]()}
         <div class="guided-result-actions">
-          <button type="button" class="secondary" data-action="back-to-review">가정 다시 검토</button>
-          <button type="button" class="primary" data-action="new-analysis">새 분석 시작</button>
+          <button type="button" class="secondary" data-result-page="${page - 1}" ${page === 0 ? "disabled" : ""}>← 이전 패널</button>
+          ${
+            page < resultPanels.length - 1
+              ? `<button type="button" class="primary" data-result-page="${page + 1}">다음: ${escapeHtml(resultPanels[page + 1])} →</button>`
+              : `
+                <button type="button" class="secondary" data-action="back-to-review">가정 다시 검토</button>
+                <button type="button" class="primary" data-action="new-analysis">새 분석 시작</button>
+              `
+          }
         </div>
       </section>
     `;
@@ -1100,7 +1354,9 @@
   const renderNavigation = () => {
     if (state.step === RESULT_STEP) return "";
     const validation = validateStep(state.step);
-    const finalBlocked = state.step === 14 && !allAssumptionsValid();
+    const finalBlocked = state.step === 14 && (
+      state.reviewPage < reviewGroups.length - 1 || !allAssumptionsValid()
+    );
     return `
       <footer class="guided-navigation">
         <button type="button" class="secondary" data-action="previous" ${state.step === 0 ? "disabled" : ""}>
@@ -1129,6 +1385,9 @@
       </div>
     `;
 
+    const contentArea = guidedRoot.closest(".content-area");
+    if (contentArea) contentArea.scrollTop = 0;
+
     const primaryInput = guidedRoot.querySelector(
       ".guided-primary-input input, .guided-choice.selected",
     );
@@ -1153,7 +1412,11 @@
     const next = guidedRoot.querySelector('[data-action="next"]');
     if (next) {
       const invalid = Boolean(validateStep(state.step).error);
-      next.disabled = invalid || (state.step === 14 && !allAssumptionsValid());
+      next.disabled = invalid || (
+        state.step === 14 && (
+          state.reviewPage < reviewGroups.length - 1 || !allAssumptionsValid()
+        )
+      );
     }
     const revenueReadout = guidedRoot.querySelector('[data-readout="revenue"]');
     if (revenueReadout)
@@ -1166,7 +1429,7 @@
     try {
       const snapshots = JSON.parse(localStorage.getItem(SNAPSHOT_KEY) || "[]");
       const list = Array.isArray(snapshots) ? snapshots : [];
-      const version = (Number(list.at(-1)?.version) || 0) + 1;
+      const version = (Number(list[list.length - 1]?.version) || 0) + 1;
       list.push({
         version,
         savedAt: new Date().toISOString(),
@@ -1210,15 +1473,83 @@
       return;
     }
 
+    if (button.dataset.waccMode) {
+      state.waccMode = button.dataset.waccMode === "saved" ? "saved" : "manual";
+      state.waccSnapshot = null;
+      state.evidence.wacc = "";
+      if (state.waccMode === "saved") {
+        waccBrowseIndex = 0;
+        loadSavedWacc({ force: true, resetBrowse: true });
+      }
+      saveState();
+      render();
+      return;
+    }
+
+    if (button.dataset.waccBrowse) {
+      const direction = button.dataset.waccBrowse === "next" ? 1 : -1;
+      waccBrowseIndex = Math.min(
+        Math.max(waccBrowseIndex + direction, 0),
+        Math.max(savedWaccRows.length - 1, 0),
+      );
+      render();
+      return;
+    }
+
+    if (button.hasAttribute("data-wacc-change")) {
+      const currentIndex = savedWaccRows.findIndex(
+        (row) => String(row.id) === String(state.waccSnapshot?.id),
+      );
+      waccBrowseIndex = currentIndex >= 0 ? currentIndex : 0;
+      state.waccSnapshot = null;
+      state.evidence.wacc = "";
+      saveState();
+      render();
+      return;
+    }
+
+    if (button.hasAttribute("data-wacc-refresh")) {
+      loadSavedWacc({ force: true });
+      return;
+    }
+
+    if (button.hasAttribute("data-go-wacc")) {
+      const target = Array.from(document.querySelectorAll(".sidebar-nav .nav-item"))
+        .find((item) => item.textContent.includes("WACC"));
+      target?.click();
+      return;
+    }
+
     if (button.dataset.waccId) {
       const selected = savedWaccRows.find((row) => String(row.id) === button.dataset.waccId);
       if (selected) {
         state.wacc = selected.wacc;
+        state.waccMode = "saved";
         state.waccSnapshot = { ...selected };
-        state.evidence.wacc = `${selected.name} · ${selected.method === "regression" ? "회귀분석" : "업종 베타"} · WACC ${formatPercent(selected.wacc)}`;
+        state.evidence.wacc = `${selected.name} · ${waccMethodLabel(selected.method)} · WACC ${formatPercent(selected.wacc)}`;
         saveState();
         render();
       }
+      return;
+    }
+
+    if (button.dataset.reviewPage !== undefined) {
+      state.reviewPage = Math.min(
+        Math.max(Number(button.dataset.reviewPage) || 0, 0),
+        reviewGroups.length - 1,
+      );
+      saveState();
+      render();
+      return;
+    }
+
+    if (button.dataset.resultPage !== undefined) {
+      state.resultPage = Math.min(
+        Math.max(Number(button.dataset.resultPage) || 0, 0),
+        resultPanels.length - 1,
+      );
+      saveState();
+      render();
       return;
     }
 
@@ -1241,13 +1572,18 @@
           break;
         }
         if (state.step === 14) {
-          if (!allAssumptionsValid()) {
+          if (
+            state.reviewPage < reviewGroups.length - 1 ||
+            !allAssumptionsValid()
+          ) {
             updateValidation();
             break;
           }
           state.lastVersion = saveSnapshot();
+          state.resultPage = 0;
           state.step = RESULT_STEP;
         } else {
+          if (state.step === 13) state.reviewPage = 0;
           state.step += 1;
         }
         saveState();
@@ -1255,6 +1591,7 @@
         break;
       }
       case "back-to-review":
+        state.reviewPage = 0;
         state.step = 14;
         saveState();
         render();
@@ -1277,7 +1614,10 @@
 
     if (field) {
       state[field] = event.target.type === "date" ? event.target.value : event.target.value === "" ? "" : Number(event.target.value);
-      if (field === "wacc") state.waccSnapshot = null;
+      if (field === "wacc") {
+        state.waccMode = "manual";
+        state.waccSnapshot = null;
+      }
       saveState();
       updateValidation();
     }
@@ -1317,7 +1657,7 @@
     }
     guidedRoot = host;
     render();
-    loadSavedWacc();
+    loadSavedWacc({ force: true, resetBrowse: true });
   };
 
   const addBetaAuditGuidance = () => {
@@ -1357,28 +1697,106 @@
     method: row.method || "industry",
     wacc: Number(row.wacc) || 0,
     costOfEquity: Number(row.cost_of_equity ?? row.costOfEquity) || 0,
+    costOfDebt: Number(row.cost_of_debt ?? row.costOfDebt) || 0,
+    taxRate: Number(row.tax_rate ?? row.taxRate) || 0,
+    debtEquityRatio: Number(row.debt_equity_ratio ?? row.debtEquityRatio) || 0,
     leveredBeta: Number(row.levered_beta ?? row.leveredBeta) || 0,
+    riskFreeRate: Number(row.risk_free_rate ?? row.riskFreeRate) || 0,
+    marketRiskPremium: Number(row.market_risk_premium ?? row.marketRiskPremium) || 0,
     createdAt: row.created_at ?? row.createdAt ?? null,
   });
 
-  async function loadSavedWacc() {
-    if (waccLoadStarted) return;
-    waccLoadStarted = true;
+  async function loadSavedWacc({ force = false, resetBrowse = false } = {}) {
+    if (waccLoadPromise) {
+      if (force) waccReloadQueued = true;
+      if (resetBrowse) waccResetBrowseQueued = true;
+      return waccLoadPromise;
+    }
+
+    const previousCandidateId = resetBrowse ? null : savedWaccRows[waccBrowseIndex]?.id;
+    if (resetBrowse) waccBrowseIndex = 0;
+    waccLoadStatus = "loading";
+    if (guidedRoot?.isConnected && state.step === 2) render();
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 1800);
-    try {
-      const response = await fetch(WACC_API, { signal: controller.signal });
-      const payload = await response.json();
-      if (payload?.success && Array.isArray(payload.data)) {
-        savedWaccRows = payload.data.map(normalizeWaccRow).filter((row) => row.wacc > 0);
+    const request = (async () => {
+      try {
+        const response = await fetch(WACC_API, { signal: controller.signal });
+        const payload = await response.json();
+        if (!payload?.success || !Array.isArray(payload.data)) {
+          throw new Error("Invalid WACC list response");
+        }
+
+        const rows = payload.data
+          .map(normalizeWaccRow)
+          .filter((row) => row.id !== null && row.id !== undefined && row.wacc > 0 && row.wacc < 100);
+        savedWaccRows = rows;
+        waccLoadStatus = "loaded";
+
+        const selectedIndex = rows.findIndex(
+          (row) => String(row.id) === String(state.waccSnapshot?.id),
+        );
+        if (state.waccMode === "saved" && state.waccSnapshot) {
+          if (selectedIndex >= 0) {
+            const selected = rows[selectedIndex];
+            state.wacc = selected.wacc;
+            state.waccSnapshot = { ...selected };
+            state.evidence.wacc = `${selected.name} · ${waccMethodLabel(selected.method)} · WACC ${formatPercent(selected.wacc)}`;
+          } else {
+            state.waccSnapshot = null;
+            state.evidence.wacc = "";
+          }
+          saveState();
+        }
+
+        const candidateIndex = rows.findIndex(
+          (row) => String(row.id) === String(previousCandidateId),
+        );
+        waccBrowseIndex = candidateIndex >= 0
+          ? candidateIndex
+          : selectedIndex >= 0
+            ? selectedIndex
+            : 0;
+      } catch {
+        waccLoadStatus = "error";
+        // Manual WACC remains available when the optional local API is offline.
+      } finally {
+        clearTimeout(timeout);
         if (guidedRoot?.isConnected && state.step === 2) render();
       }
-    } catch {
-      // Manual WACC remains available when the optional local API is offline.
+    })();
+
+    waccLoadPromise = request;
+    try {
+      await request;
     } finally {
-      clearTimeout(timeout);
+      waccLoadPromise = null;
+      if (waccReloadQueued) {
+        const shouldResetBrowse = waccResetBrowseQueued;
+        waccReloadQueued = false;
+        waccResetBrowseQueued = false;
+        loadSavedWacc({ force: true, resetBrowse: shouldResetBrowse });
+      }
     }
+    return request;
   }
+
+  const handleWaccRecordsChanged = (event) => {
+    if (guidedRoot?.isConnected) {
+      loadSavedWacc({
+        force: true,
+        resetBrowse: event?.detail?.method === "POST" || event?.type === "storage",
+      });
+    } else {
+      waccLoadStatus = "idle";
+    }
+  };
+
+  globalThis.addEventListener?.(WACC_CHANGED_EVENT, handleWaccRecordsChanged);
+  globalThis.addEventListener?.("storage", (event) => {
+    if (event.key === OFFLINE_WACC_STORAGE_KEY) handleWaccRecordsChanged(event);
+  });
 
   const syncPage = () => {
     syncQueued = false;

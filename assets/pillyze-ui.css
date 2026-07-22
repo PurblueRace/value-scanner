@@ -2552,7 +2552,8 @@ textarea:focus-visible,
   background: #e8f7f1;
 }
 
-.phase3-feature-card h4 {
+.phase3-feature-card h4,
+.phase3-feature-card h3 {
   margin: 0.85rem 0 0;
   color: var(--text-primary);
   font-size: 0.95rem;

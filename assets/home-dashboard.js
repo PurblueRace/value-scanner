@@ -8,12 +8,11 @@
   const ONBOARDING_TOTAL_STEPS = 4;
 
   let homeVisible = true;
-  let legacyOnboardingAllowed = true;
+  let legacyOnboardingAllowed = false;
   let previousActiveNav = null;
   let syncQueued = false;
   let onboardingAutoChecked = false;
   let onboardingLastFocus = null;
-  let nextNavigationAllowsLegacyOnboarding = null;
   let onboardingBackgroundState = [];
   let onboardingState = {
     step: 0,
@@ -24,11 +23,11 @@
 
   const escapeHtml = (value) =>
     String(value ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
 
   const safeJson = (key, fallback) => {
     try {
@@ -70,7 +69,7 @@
     const progress = hasDraft
       ? Math.round((step / DCF_TOTAL_STEPS) * 100)
       : 0;
-    const latestSnapshot = snapshots.at(-1) || null;
+    const latestSnapshot = snapshots[snapshots.length - 1] || null;
     const rawEnterpriseValue = Number(latestSnapshot?.result?.enterpriseValue);
     const rawWacc = Number(draft?.wacc);
     const rawRevenue = Number(draft?.revenue);
@@ -251,161 +250,73 @@
       : activity.hasDraft
         ? "DCF 이어서 하기"
         : "DCF 분석 시작";
-    const dcfStatus = activity.isResult
-      ? "분석 완료"
-      : activity.hasDraft
-        ? `${activity.step} / ${DCF_TOTAL_STEPS} 단계`
-        : "새 분석 준비";
-    const enterpriseValue = activity.latestEnterpriseValue !== null
-      ? `${formatNumber(activity.latestEnterpriseValue)}억원`
-      : "분석 전";
-    const waccValue = activity.wacc !== null ? `${activity.wacc.toFixed(2)}%` : "—";
-    const revenueValue = activity.revenue !== null
-      ? `${formatNumber(activity.revenue)}억원`
-      : "자료 입력 전";
     const recentLabel = activity.latestSavedAt || "아직 저장된 결과가 없어요";
+    const nextTitle = activity.hasDraft
+      ? "진행 중인 DCF부터 이어갈까요?"
+      : "어떤 가치를 계산하려고 하나요?";
+    const nextDescription = activity.hasDraft
+      ? `저장된 ${activity.step}단계부터 이어서 진행할 수 있어요. 다른 분석이 필요하면 새 경로를 선택하세요.`
+      : "목적을 하나 고르면 필요한 계산을 가장 알맞은 순서로 안내해 드려요.";
 
     return `
-      <div class="home-dashboard-inner aurelius-home">
-        <header class="aurelius-topbar" aria-label="Value Scanner 주요 메뉴">
-          <div class="aurelius-brand">
+      <div class="home-dashboard-inner talkdata-home">
+        <aside class="talkdata-sidebar" aria-label="Value Scanner 빠른 메뉴">
+          <div class="talkdata-workspace-card">
+            <span aria-hidden="true">VS</span>
+            <div><strong>Valuation Workspace</strong><small>브라우저에 자동 저장</small></div>
+          </div>
+
+          <button type="button" class="talkdata-new-analysis" data-home-onboarding-action="open">
+            <span aria-hidden="true">＋</span> 새 분석 경로
+          </button>
+
+          <div class="talkdata-divider" aria-hidden="true"></div>
+
+          <div class="talkdata-sidebar-brand">
             <span class="aurelius-brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
-            <strong>Value Scanner</strong>
+            <div><strong>Value Scanner</strong><small>기업가치 분석 시스템</small></div>
           </div>
-          <nav class="aurelius-topnav" aria-label="빠른 이동">
-            <button type="button" data-home-go="wacc">WACC</button>
-            <button type="button" data-home-go="dcf">DCF</button>
-            <button type="button" data-home-go="phase3">고급 가치평가</button>
+
+          <nav class="talkdata-menu" aria-label="분석 메뉴">
+            <button type="button" class="active" aria-current="page"><span aria-hidden="true">●</span> 분석 개요</button>
+            <button type="button" data-home-go="wacc"><span aria-hidden="true">β</span> WACC 계산하기</button>
+            <button type="button" data-home-go="dcf"><span aria-hidden="true">◆</span> DCF 분석</button>
+            <button type="button" data-home-go="multiples"><span aria-hidden="true">≋</span> 멀티플</button>
+            <button type="button" data-home-go="phase3"><span aria-hidden="true">□</span> 고급 가치평가</button>
           </nav>
-          <div class="aurelius-top-actions">
-            <button type="button" class="ghost" data-home-onboarding-action="open">사용 가이드</button>
-            <button type="button" class="primary" data-home-go="dcf">분석 시작 <span aria-hidden="true">→</span></button>
-          </div>
-        </header>
 
-        <section class="aurelius-hero" aria-labelledby="home-dashboard-title">
-          <div class="aurelius-hero-copy">
-            <span class="aurelius-kicker"><b aria-hidden="true">✦</b> 전략재무, 더 명확하게</span>
-            <h2 id="home-dashboard-title" tabindex="-1">
-              미래를 모델링하고,<br>
-              <span>가치를 현실로.</span>
-            </h2>
-            <p>
-              기업가치, 합병 시너지, WACC, DCF, 듀레이션과 옵션까지.<br>
-              중요한 재무 의사결정을 하나의 흐름에서 검토합니다.
-            </p>
-            <div class="aurelius-hero-actions">
-              <button type="button" class="primary" data-home-onboarding-action="open">내 분석 경로 찾기 <span aria-hidden="true">→</span></button>
-              <button type="button" class="tour" data-home-go="dcf"><i aria-hidden="true">▶</i> ${escapeHtml(dcfActionLabel)}</button>
-            </div>
-            <div class="aurelius-hero-proof" aria-label="플랫폼 특징">
-              <span><i aria-hidden="true"></i> 단계별 질문형 분석</span>
-              <span><i aria-hidden="true"></i> 근거와 버전 자동 보관</span>
-            </div>
+          <div class="talkdata-side-status">
+            <span><i aria-hidden="true"></i> 로컬 저장 정상</span>
+            <small>${escapeHtml(recentLabel)}</small>
           </div>
+        </aside>
 
-          <div class="aurelius-dashboard-preview" aria-label="현재 분석 현황 미리보기">
-            <aside class="preview-sidebar" aria-hidden="true">
-              <div class="preview-brand"><span class="aurelius-brand-mark small"><i></i><i></i><i></i></span><b>Scanner</b></div>
-              <ul>
-                <li class="active"><span>⌂</span>Overview</li>
-                <li><span>β</span>WACC</li>
-                <li><span>◆</span>DCF</li>
-                <li><span>≋</span>Scenarios</li>
-                <li><span>□</span>Reports</li>
-              </ul>
-              <div class="preview-profile"><i>VS</i><span><b>Valuation</b><small>Workspace</small></span></div>
-            </aside>
-            <div class="preview-main">
-              <header>
-                <div><strong>Dashboard</strong><small>현재 분석 현황을 한눈에 확인하세요.</small></div>
-                <span>최근 분석 ▾</span>
-              </header>
-              <div class="preview-metrics">
-                <article>
-                  <i class="metric-icon purple">◇</i><small>기업가치</small><strong>${escapeHtml(enterpriseValue)}</strong>
-                  <em class="up">${activity.snapshotCount ? `저장 버전 ${activity.snapshotCount}개` : "DCF로 계산해 보세요"}</em>
-                  <div class="mini-bars purple" aria-hidden="true"><i style="--h:26%"></i><i style="--h:42%"></i><i style="--h:35%"></i><i style="--h:58%"></i><i style="--h:74%"></i><i style="--h:68%"></i><i style="--h:92%"></i></div>
-                </article>
-                <article>
-                  <i class="metric-icon blue">◎</i><small>DCF 진행률</small><strong>${activity.progress}%</strong>
-                  <em class="up">${escapeHtml(dcfStatus)}</em>
-                  <div class="mini-bars blue" aria-hidden="true"><i style="--h:20%"></i><i style="--h:32%"></i><i style="--h:28%"></i><i style="--h:48%"></i><i style="--h:62%"></i><i style="--h:56%"></i><i style="--h:82%"></i></div>
-                </article>
-                <article>
-                  <i class="metric-icon green">≋</i><small>현재 매출액</small><strong>${escapeHtml(revenueValue)}</strong>
-                  <em class="up">입력 가정 기준</em>
-                  <div class="mini-bars green" aria-hidden="true"><i style="--h:18%"></i><i style="--h:28%"></i><i style="--h:45%"></i><i style="--h:38%"></i><i style="--h:62%"></i><i style="--h:72%"></i><i style="--h:88%"></i></div>
-                </article>
-                <article>
-                  <i class="metric-icon violet">%</i><small>WACC</small><strong>${escapeHtml(waccValue)}</strong>
-                  <em>DCF 할인율</em>
-                  <div class="mini-bars violet" aria-hidden="true"><i style="--h:88%"></i><i style="--h:72%"></i><i style="--h:42%"></i><i style="--h:28%"></i><i style="--h:45%"></i><i style="--h:38%"></i><i style="--h:52%"></i></div>
-                </article>
+        <main class="talkdata-main">
+          <section class="talkdata-intro" aria-labelledby="home-dashboard-title">
+            <header>
+              <h2 id="home-dashboard-title" tabindex="-1">Value Scanner</h2>
+              <p>데이터와 대화하듯 기업가치를 분석하세요</p>
+              <small>한 번에 한 가지 질문만 답하면 다음 계산으로 이어집니다</small>
+            </header>
+
+            <div class="talkdata-command talkdata-next-step" role="group" aria-labelledby="home-next-title">
+              <span class="talkdata-command-icon" aria-hidden="true">⌕</span>
+              <div>
+                <strong id="home-next-title">${escapeHtml(nextTitle)}</strong>
+                <small>${escapeHtml(nextDescription)}</small>
               </div>
-              <div class="preview-charts">
-                <article class="preview-valuation-chart">
-                  <header><span><small>DCF Valuation</small><strong>${escapeHtml(enterpriseValue)}</strong></span><em>${activity.progress}% 진행</em></header>
-                  <div class="preview-bar-chart" aria-hidden="true">
-                    <i style="--h:32%"><b>1Y</b></i><i style="--h:40%"><b>2Y</b></i><i style="--h:48%"><b>3Y</b></i><i style="--h:58%"><b>4Y</b></i><i style="--h:68%"><b>5Y</b></i><i style="--h:84%"><b>TV</b></i>
-                  </div>
-                </article>
-                <article class="preview-cash-chart">
-                  <header><span><small>Cash Flow Forecast</small><strong>FCFF</strong></span><em>Base Case</em></header>
-                  <div class="preview-area-chart" aria-hidden="true"><i></i><span></span></div>
-                  <footer><small>현재 매출</small><small>예측 5년</small></footer>
-                </article>
-              </div>
+              <button type="button" ${activity.hasDraft ? 'data-home-go="dcf"' : 'data-home-onboarding-action="open"'}>
+                ${activity.hasDraft ? escapeHtml(dcfActionLabel) : "분석 경로 찾기"} <span aria-hidden="true">→</span>
+              </button>
             </div>
-          </div>
-        </section>
 
-        <section class="aurelius-feature-section" aria-labelledby="home-feature-title">
-          <header class="sr-only"><h3 id="home-feature-title">가치평가 기능</h3></header>
-          <div class="aurelius-feature-grid">
-            <button type="button" class="aurelius-feature-card fair" data-home-go="phase3">
-              <span class="feature-icon">✣</span><strong>Fair Value</strong><small>여러 평가방법을 하나의 신뢰구간으로.</small><div class="feature-art"><i></i><i></i><i></i></div><b aria-hidden="true">→</b>
-            </button>
-            <button type="button" class="aurelius-feature-card synergy" data-home-go="phase3">
-              <span class="feature-icon">◉</span><strong>Merger Synergy</strong><small>시너지를 식별하고 가치로 연결.</small><div class="feature-art"><i></i><i></i><i></i></div><b aria-hidden="true">→</b>
-            </button>
-            <button type="button" class="aurelius-feature-card wacc" data-home-go="wacc">
-              <span class="feature-icon">≋</span><strong>WACC</strong><small>시장근거를 반영한 자본비용.</small><div class="feature-art"><i></i><i></i><i></i></div><b aria-hidden="true">→</b>
-            </button>
-            <button type="button" class="aurelius-feature-card dcf" data-home-go="dcf">
-              <span class="feature-icon">▥</span><strong>DCF</strong><small>가정과 시나리오를 연결한 현금흐름.</small><div class="feature-art"><i></i><i></i><i></i><i></i></div><b aria-hidden="true">→</b>
-            </button>
-            <button type="button" class="aurelius-feature-card duration" data-home-go="phase3">
-              <span class="feature-icon">⌁</span><strong>Duration</strong><small>금리 민감도와 가격 위험을 한눈에.</small><div class="feature-art"><i></i><i></i><i></i></div><b aria-hidden="true">→</b>
-            </button>
-            <button type="button" class="aurelius-feature-card option" data-home-go="phase3">
-              <span class="feature-icon">◎</span><strong>Black–Scholes</strong><small>옵션가격과 그릭스를 명확하게.</small><div class="feature-art"><i></i><i></i><i></i></div><b aria-hidden="true">→</b>
-            </button>
-          </div>
-        </section>
-
-        <footer class="aurelius-trust-row">
-          <span>평가기준일과 가정 근거</span><i></i><span>자동 저장되는 DCF 단계</span><i></i><span>버전별 결과 비교</span><i></i><span>외부 검토용 체크리스트</span>
-        </footer>
-
-        <section class="aurelius-workspace" aria-labelledby="home-workspace-title">
-          <header>
-            <div><span>YOUR WORKSPACE</span><h3 id="home-workspace-title">분석을 이어서 완성하세요</h3></div>
-            <p>${escapeHtml(recentLabel)}</p>
-          </header>
-          <div class="aurelius-workspace-grid">
-            <article class="workspace-progress-card">
-              <div class="workspace-card-title"><span class="metric-icon blue">◆</span><div><strong>DCF 분석</strong><small>${escapeHtml(dcfStatus)}</small></div><em>${activity.progress}%</em></div>
-              <div class="workspace-progress-track" role="progressbar" aria-label="DCF 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${activity.progress}"><i style="width:${activity.progress}%"></i></div>
-              <div class="workspace-card-bottom"><span>${activity.snapshotCount ? `저장된 결과 ${activity.snapshotCount}개` : "아직 저장된 결과 없음"}</span><button type="button" data-home-go="dcf">${escapeHtml(dcfActionLabel)} →</button></div>
-            </article>
-            <article class="workspace-route-card">
-              <div class="workspace-card-title"><span class="metric-icon purple">✦</span><div><strong>추천 분석 경로</strong><small>외부 검토에 설명 가능한 순서</small></div></div>
-              <ol><li><b>1</b><span>비교기업·자산베타</span></li><li><b>2</b><span>WACC 산정</span></li><li><b>3</b><span>DCF·민감도</span></li></ol>
-              <button type="button" data-home-onboarding-action="open">내 경로 다시 설정 →</button>
-            </article>
-          </div>
-        </section>
+            ${activity.hasDraft ? `
+              <button type="button" class="talkdata-secondary-path" data-home-onboarding-action="open">
+                다른 분석 경로 선택
+              </button>
+            ` : ""}
+          </section>
+        </main>
 
         <div class="home-onboarding-layer" data-home-onboarding-layer hidden></div>
       </div>
@@ -414,7 +325,7 @@
 
   const onboardingGoalLabels = {
     full: "기업가치 평가",
-    wacc: "할인율·WACC 산정",
+    wacc: "WACC 계산하기",
     dcf: "DCF를 바로 진행",
     advanced: "고급 금융상품·M&A 분석",
   };
@@ -448,7 +359,6 @@
   const onboardingRecommendation = () => {
     if (onboardingState.goal === "advanced") {
       const focus = advancedFocusLabels[onboardingState.advancedFocus] || "고급 가치평가";
-      const isPortfolioRisk = onboardingState.advancedFocus === "portfolio";
       const preparation = {
         options: ["기초자산 가격과 행사가격", "만기와 변동성", "무위험수익률과 배당수익률"],
         convertible: ["액면·쿠폰·만기", "전환가액과 주가·변동성", "콜·풋·리픽싱 조건", "신용스프레드"],
@@ -458,19 +368,13 @@
         portfolio: ["보유자산별 시장가치와 베타", "현금흐름 시점과 수익률", "목표 듀레이션", "금리변동 시나리오"],
       }[onboardingState.advancedFocus] || ["계약조건", "시장 가정", "평가기준일 자료"];
       return {
-        destination: isPortfolioRisk ? "wacc" : "phase3",
+        destination: "phase3",
         eyebrow: focus,
-        title: isPortfolioRisk
-          ? "위험·포트폴리오 조정 로드맵을 확인해 보세요"
-          : "Phase 3 로드맵부터 확인해 보세요",
-        description: isPortfolioRisk
-          ? "베타·WACC 화면의 고급 위험 로드맵에서 자산베타와 포트폴리오 듀레이션 조정 계획을 확인할 수 있어요."
-          : "필요한 모형과 입력자료를 확인한 뒤 기능별 구현 순서에 맞춰 준비할 수 있어요.",
-        route: isPortfolioRisk
-          ? ["베타·WACC", "자산베타", "포트폴리오 조정 계획"]
-          : ["고급 가치평가", focus, "구현 예정 확인"],
+        title: "Phase 3 로드맵부터 확인해 보세요",
+        description: "필요한 모형과 입력자료를 확인한 뒤 기능별 구현 순서에 맞춰 준비할 수 있어요.",
+        route: ["고급 가치평가", focus, "구현 예정 확인"],
         preparation,
-        action: isPortfolioRisk ? "위험·포트폴리오 로드맵 보기" : "Phase 3 로드맵 보기",
+        action: "Phase 3 로드맵 보기",
         note: "현재 고급 기능은 로드맵 단계이며 계산기는 순차적으로 구현될 예정입니다.",
       };
     }
@@ -483,7 +387,7 @@
         description: "비교기업의 시장위험을 대상 회사의 자본구조에 맞게 조정해 검토 가능한 할인율을 계산해요.",
         route: ["비교기업 베타", "자산베타·재레버링", "자기자본비용·WACC"],
         preparation: ["비교기업 후보와 선정 이유", "베타 출처·기준일·측정조건", "시장가치 기준 부채·자기자본", "법인세율과 세전 차입원가", "무위험수익률과 시장위험프리미엄"],
-        action: "WACC 산정 시작",
+        action: "WACC 계산 시작",
         note: "계산값과 함께 비교기업, 기준일과 가정 근거를 메모해 두면 외부 검토에 유용해요.",
       };
     }
@@ -570,7 +474,7 @@
               value: "advanced",
               code: "04",
               title: "금융상품이나 M&A를 평가하고 싶어요",
-              description: "옵션·전환사채·채권·스왑·합병 기능의 Phase 3 계획을 확인합니다.",
+              description: "옵션·전환사채·채권·스왑·포트폴리오·합병 기능의 Phase 3 계획을 확인합니다.",
             })}
           </div>
         `;
@@ -630,7 +534,7 @@
           return `
             <span class="home-onboarding-eyebrow">베타 자료 준비</span>
             <h3 id="home-onboarding-title" tabindex="-1">베타·WACC 자료가 어느 정도 준비됐나요?</h3>
-            <p class="home-onboarding-description" id="home-onboarding-description">준비 수준과 관계없이 WACC 산정 화면으로 안내하고 필요한 근거를 함께 보여드려요.</p>
+            <p class="home-onboarding-description" id="home-onboarding-description">준비 수준과 관계없이 WACC 계산 화면으로 안내하고 필요한 근거를 함께 보여드려요.</p>
             <div class="home-onboarding-choice-list" role="group" aria-labelledby="home-onboarding-title">
               ${onboardingChoice({
                 field: "waccReady",
@@ -967,7 +871,7 @@
     ).filter((element) => !element.hidden);
     if (!focusable.length) return;
     const first = focusable[0];
-    const last = focusable.at(-1);
+    const last = focusable[focusable.length - 1];
     const heading = layer.querySelector("#home-onboarding-title");
     if (event.shiftKey && (document.activeElement === first || document.activeElement === heading)) {
       event.preventDefault();
@@ -1020,9 +924,7 @@
           event.preventDefault();
           showDashboard({ focus: true });
         } else {
-          const opensWacc = item.textContent.includes("WACC");
-          const allowOnboarding = nextNavigationAllowsLegacyOnboarding ?? opensWacc;
-          nextNavigationAllowsLegacyOnboarding = null;
+          const allowOnboarding = false;
           legacyOnboardingAllowed = allowOnboarding;
           if (homeVisible) hideDashboard({ allowOnboarding });
           else syncSupportingUi(false, allowOnboarding);
@@ -1087,8 +989,8 @@
     previousActiveNav = null;
   };
 
-  const syncSupportingUi = (isHome, allowOnboarding = legacyOnboardingAllowed) => {
-    const suppressLegacyHelp = isHome || !allowOnboarding;
+  const syncSupportingUi = () => {
+    const suppressLegacyHelp = true;
     document.querySelectorAll(".onboarding-overlay").forEach((overlay) => {
       overlay.classList.toggle("home-onboarding-suppressed", suppressLegacyHelp);
     });
@@ -1198,14 +1100,12 @@
 
   const navigateTo = (
     destination,
-    { allowLegacyOnboarding = destination === "wacc" } = {},
+    { allowLegacyOnboarding = false } = {},
   ) => {
     const target = findNavigationTarget(destination);
     if (!target) return;
-    nextNavigationAllowsLegacyOnboarding = allowLegacyOnboarding;
     hideDashboard({ allowOnboarding: allowLegacyOnboarding });
     target.click();
-    nextNavigationAllowsLegacyOnboarding = null;
     focusDestinationHeading(destination);
   };
 
@@ -1217,12 +1117,25 @@
 
     if (homeVisible) {
       const main = host.closest(".main-content");
+      if (!host.firstElementChild) {
+        try {
+          host.innerHTML = renderDashboard();
+        } catch (error) {
+          homeVisible = false;
+          host.hidden = true;
+          main?.classList.remove("home-dashboard-active");
+          main?.closest(".app")?.classList.remove("home-dashboard-mode");
+          restoreOriginalNavigation(homeItem);
+          syncSupportingUi(false, legacyOnboardingAllowed);
+          console.error("홈 화면을 불러오지 못해 기본 화면으로 돌아갑니다.", error);
+          return;
+        }
+      }
       host.hidden = false;
       main?.classList.add("home-dashboard-active");
       main?.closest(".app")?.classList.add("home-dashboard-mode");
       suppressOriginalNavigation(homeItem);
       syncSupportingUi(true);
-      if (!host.firstElementChild) host.innerHTML = renderDashboard();
       maybeOpenOnboarding();
     } else {
       syncSupportingUi(false, legacyOnboardingAllowed);
