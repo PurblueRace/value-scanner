@@ -1077,6 +1077,418 @@
   }
 }
 
+/* Guided merger and stock-exchange analysis */
+
+.guided-ma {
+  color: var(--talkdata-text, #111827);
+}
+
+.guided-ma-stage,
+.guided-ma-progress {
+  width: min(100%, 980px);
+  margin: 0 auto;
+}
+
+.guided-ma-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.guided-ma .guided-group-tabs {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.guided-ma-exit {
+  min-height: 32px;
+  padding: 0 10px;
+  color: var(--talkdata-muted, #667085);
+  background: var(--talkdata-white, #fff);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 7px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.guided-ma-exit:hover,
+.guided-ma-exit:focus-visible {
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-surface, #f8fafc);
+  outline: none;
+}
+
+.guided-ma-scope-note {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  color: var(--talkdata-text, #111827);
+  background: #ecfdf3;
+  border: 1px solid #86d9aa;
+  border-radius: 10px;
+}
+
+.guided-ma-scope-note strong {
+  color: var(--talkdata-text, #111827);
+  font-size: 0.78rem;
+}
+
+.guided-ma-scope-note span {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.67rem;
+  line-height: 1.45;
+}
+
+.guided-ma-basis-grid,
+.guided-ma-input-grid,
+.guided-ma-funding-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.guided-ma-basis-grid,
+.guided-ma-input-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.guided-ma-funding-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.guided-ma-basis-grid label,
+.guided-ma-input-grid label,
+.guided-ma-funding-grid label {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  color: var(--talkdata-text, #111827);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.guided-ma-basis-grid input,
+.guided-ma-basis-grid select {
+  width: 100%;
+  min-height: 56px;
+  padding: 0 13px;
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-white, #fff);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.94rem;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-ma-basis-grid input:focus,
+.guided-ma-basis-grid select:focus {
+  border-color: var(--talkdata-danger, #dc2626);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+  outline: none;
+}
+
+.guided-ma-input-grid .guided-input-wrap,
+.guided-ma-funding-grid .guided-input-wrap {
+  min-height: 56px;
+  border-radius: 10px;
+}
+
+.guided-ma-input-grid .guided-input-wrap input,
+.guided-ma-funding-grid .guided-input-wrap input {
+  color: var(--talkdata-text, #111827);
+  font-size: clamp(0.94rem, 2.1vw, 1.18rem);
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-ma-input-grid .guided-input-wrap input:disabled,
+.guided-ma-funding-grid .guided-input-wrap input:disabled {
+  color: var(--talkdata-muted, #667085);
+  background: var(--talkdata-surface, #f8fafc);
+  opacity: 0.72;
+}
+
+.guided-ma-mode-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.guided-ma-preview {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 13px 15px;
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-surface, #f8fafc);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 10px;
+}
+
+.guided-ma-preview span,
+.guided-ma-preview small {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.66rem;
+}
+
+.guided-ma-preview strong {
+  overflow-wrap: anywhere;
+  color: var(--talkdata-text, #111827);
+  text-align: right;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-ma-deal-preview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.guided-ma-deal-preview article {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  padding: 13px;
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-surface, #f8fafc);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 9px;
+}
+
+.guided-ma-deal-preview span {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.64rem;
+}
+
+.guided-ma-deal-preview strong {
+  overflow-wrap: anywhere;
+  color: var(--talkdata-text, #111827);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-ma-result-hero {
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-info, #eff6ff);
+  border: 1px solid var(--talkdata-info-border, #bfdbfe);
+}
+
+.guided-ma-result-hero .guided-eyebrow,
+.guided-ma-result-hero p,
+.guided-ma-result-hero > div > strong small {
+  color: var(--talkdata-muted, #667085);
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-ma-result-hero h3,
+.guided-ma-result-hero > div > strong {
+  color: var(--talkdata-text, #111827);
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-ma-result-hero .guided-result-badge {
+  color: var(--talkdata-danger, #dc2626);
+  background: #fff7f7;
+  border-color: #fecaca;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-ma-metric-grid,
+.guided-ma-shareholder-grid,
+.guided-ma-eps-grid,
+.guided-ma-scenario-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.guided-ma-metric-grid,
+.guided-ma-shareholder-grid,
+.guided-ma-eps-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.guided-ma-scenario-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.guided-ma-metric-grid article,
+.guided-ma-shareholder-grid article,
+.guided-ma-eps-grid article,
+.guided-ma-scenario-grid article {
+  display: flex;
+  min-width: 0;
+  min-height: 108px;
+  padding: 15px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-white, #fff);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 9px;
+}
+
+.guided-ma-scenario-grid article:first-child {
+  background: var(--talkdata-info, #eff6ff);
+  border-color: var(--talkdata-info-border, #bfdbfe);
+}
+
+.guided-ma-eps-grid article.positive {
+  background: #ecfdf3;
+  border-color: #86d9aa;
+}
+
+.guided-ma-eps-grid article.negative {
+  background: #fff1f1;
+  border-color: #fecaca;
+}
+
+.guided-ma-metric-grid span,
+.guided-ma-shareholder-grid span,
+.guided-ma-eps-grid span,
+.guided-ma-scenario-grid span,
+.guided-ma-metric-grid small,
+.guided-ma-shareholder-grid small,
+.guided-ma-eps-grid small,
+.guided-ma-scenario-grid small {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.64rem;
+  line-height: 1.42;
+}
+
+.guided-ma-metric-grid strong,
+.guided-ma-shareholder-grid strong,
+.guided-ma-eps-grid strong,
+.guided-ma-scenario-grid strong {
+  overflow-wrap: anywhere;
+  color: var(--talkdata-text, #111827);
+  font-size: clamp(0.92rem, 2vw, 1.18rem);
+  font-variant-numeric: tabular-nums;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-ma-bridge,
+.guided-ma-eps-bridge {
+  display: grid;
+  gap: 0;
+  margin-bottom: 12px;
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-white, #fff);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.guided-ma-bridge > div,
+.guided-ma-eps-bridge > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 14px;
+  border-top: 1px solid var(--talkdata-border, #e5e7eb);
+}
+
+.guided-ma-bridge > div:first-child,
+.guided-ma-eps-bridge > div:first-child {
+  border-top: 0;
+}
+
+.guided-ma-bridge > div.total,
+.guided-ma-eps-bridge > div.total {
+  background: var(--talkdata-accent-soft, #fff1f1);
+}
+
+.guided-ma-bridge span,
+.guided-ma-eps-bridge span {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.67rem;
+}
+
+.guided-ma-bridge strong,
+.guided-ma-eps-bridge strong {
+  overflow-wrap: anywhere;
+  color: var(--talkdata-text, #111827);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-ma-bridge .total strong,
+.guided-ma-eps-bridge .total strong {
+  color: var(--talkdata-danger, #dc2626);
+}
+
+.guided-ma-checks .guided-assumption-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.guided-ma .guided-result-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 840px) {
+  .guided-ma-funding-grid,
+  .guided-ma-scenario-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .guided-ma-progress .guided-progress-topline {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .guided-ma-progress .guided-autosave {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .guided-ma-progress .guided-ma-exit {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .guided-ma-metric-grid,
+  .guided-ma-shareholder-grid,
+  .guided-ma-eps-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 540px) {
+  .guided-ma .guided-group-tabs,
+  .guided-ma-result > .guided-group-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .guided-ma-basis-grid,
+  .guided-ma-input-grid,
+  .guided-ma-funding-grid,
+  .guided-ma-mode-grid,
+  .guided-ma-deal-preview,
+  .guided-ma-metric-grid,
+  .guided-ma-shareholder-grid,
+  .guided-ma-eps-grid,
+  .guided-ma-scenario-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .guided-ma-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .guided-ma-preview strong {
+    text-align: left;
+  }
+}
+
 /* Guided interest-rate swap calculator */
 
 .guided-irs {

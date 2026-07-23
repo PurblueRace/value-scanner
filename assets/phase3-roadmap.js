@@ -112,18 +112,21 @@
       roadmapTitle: "M&A 거래",
       eyebrow: "M&A 거래",
       title: "합병 가치평가",
-      description: "기업가치, 주당가치와 회계상 이전대가를 서로 다른 결과로 구분합니다.",
+      description: "거래조건, 주주가치와 EPS 효과를 계산하고 취득회계의 측정범위와 구분합니다.",
       features: [
         {
           code: "M&A",
           title: "합병·주식교환 분석",
           description:
-            "합병 시너지의 현재가치, 협상 가능한 주식교환비율, 현금·주식·조건부대가의 취득일 공정가치를 분석합니다.",
+            "현금·주식 혼합대가, 프리미엄, 시너지 가치배분과 EPS 증감을 분석합니다.",
           purpose:
-            "시너지, 주식교환비율과 거래대가를 구분해 합병조건과 취득일 공정가치를 검토할 때 사용합니다.",
-          tags: ["합병 시너지", "주식교환비율", "합병대가 공정가치"],
-          status: "거래모형 설계",
-          tone: "design",
+            "헤드라인 거래조건과 거래 후 주주가치·EPS 효과를 구분해 합병조건의 경제성을 검토할 때 사용합니다.",
+          methodNote:
+            "투자은행식 거래경제성 분석이며, 취득일 이전대가 공정가치·PPA·NCI·영업권은 결과와 명확히 분리합니다.",
+          tags: ["합병 시너지", "주식교환비율", "주주가치·EPS"],
+          status: "사용 가능",
+          tone: "ready",
+          calculator: "merger",
         },
       ],
     },
@@ -147,6 +150,7 @@
     bond: "ValueScannerBond",
     "portfolio-risk": "ValueScannerPortfolioRisk",
     "interest-rate-swap": "ValueScannerInterestRateSwap",
+    merger: "ValueScannerMerger",
   };
   const totalSteps = featureSteps.length + 1;
   let currentStep = 0;
@@ -187,7 +191,7 @@
       <div>
         <span class="phase3-kicker">PHASE 3 · 소개</span>
         <h2 id="phase3-hub-title" tabindex="-1">고급 가치평가를 하나씩 살펴볼까요?</h2>
-        <p>옵션·복합상품, 금리상품과 M&amp;A는 목적에 따라 필요한 모형이 달라요. 옵션·전환사채·채권·포트폴리오 위험·스왑 계산기는 지금 사용할 수 있고, M&amp;A 기능을 마지막으로 준비하고 있어요.</p>
+        <p>옵션·복합상품, 금리상품과 M&amp;A는 목적에 따라 필요한 모형이 달라요. Phase 3의 일곱 계산기를 모두 사용할 수 있으며, 각 기능은 한 질문씩 단계별로 진행됩니다.</p>
         <p><strong>진행 순서:</strong> 시장모형 → 금리·복합상품 → M&amp;A 거래</p>
         <div class="step-nav phase3-step-navigation">
           <span></span>
@@ -320,10 +324,10 @@
     if (
       description &&
       description.textContent.trim() !==
-        "옵션·전환사채·채권·포트폴리오 위험·스왑 분석을 사용할 수 있으며 M&A 기능을 마지막으로 준비하고 있습니다."
+        "옵션·복합상품, 채권·금리위험과 M&A까지 Phase 3의 일곱 계산기를 모두 사용할 수 있습니다."
     ) {
       description.textContent =
-        "옵션·전환사채·채권·포트폴리오 위험·스왑 분석을 사용할 수 있으며 M&A 기능을 마지막으로 준비하고 있습니다.";
+        "옵션·복합상품, 채권·금리위험과 M&A까지 Phase 3의 일곱 계산기를 모두 사용할 수 있습니다.";
     }
   };
 
