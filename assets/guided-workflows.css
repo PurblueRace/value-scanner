@@ -1077,6 +1077,377 @@
   }
 }
 
+/* Guided fixed-rate bond calculator */
+
+.guided-bond {
+  color: var(--talkdata-text, #111827);
+}
+
+.guided-bond-stage,
+.guided-bond-progress {
+  width: min(100%, 960px);
+  margin: 0 auto;
+}
+
+.guided-bond-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.guided-bond .guided-group-tabs {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.guided-bond-exit {
+  min-height: 32px;
+  padding: 0 10px;
+  color: var(--talkdata-muted, #667085);
+  background: var(--talkdata-white, #fff);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 7px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.guided-bond-exit:hover,
+.guided-bond-exit:focus-visible {
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-surface, #f8fafc);
+  outline: none;
+}
+
+.guided-bond-scope-grid,
+.guided-bond-mode-grid,
+.guided-bond-daycount-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.guided-bond-input-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.guided-bond-input-grid label {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  color: var(--talkdata-text, #111827);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.guided-bond-input-grid label > span small {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.62rem;
+  font-weight: 500;
+}
+
+.guided-bond-input-grid input[type="date"],
+.guided-bond-input-grid select {
+  width: 100%;
+  min-height: 58px;
+  padding: 0 14px;
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-white, #fff);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.guided-bond-input-grid input[type="date"]:focus,
+.guided-bond-input-grid select:focus {
+  border-color: var(--talkdata-danger, #dc2626);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+  outline: none;
+}
+
+.guided-bond-input-grid .guided-input-wrap {
+  min-height: 58px;
+  border-radius: 10px;
+}
+
+.guided-bond-input-grid .guided-input-wrap input {
+  color: var(--talkdata-text, #111827);
+  font-size: clamp(1.02rem, 2.5vw, 1.35rem);
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-bond-ack {
+  display: grid;
+  width: 100%;
+  margin-top: 12px;
+  padding: 14px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  color: var(--talkdata-text, #111827);
+  text-align: left;
+  background: #fff8e6;
+  border: 1px solid #f5d77a;
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.guided-bond-ack.selected {
+  background: #ecfdf3;
+  border-color: #86d9aa;
+}
+
+.guided-bond-ack > span {
+  color: var(--talkdata-danger, #dc2626);
+  font-weight: 800;
+}
+
+.guided-bond-ack div {
+  display: grid;
+  gap: 4px;
+}
+
+.guided-bond-ack strong {
+  color: var(--talkdata-text, #111827);
+  font-size: 0.78rem;
+}
+
+.guided-bond-ack small {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.66rem;
+  line-height: 1.45;
+}
+
+.guided-bond-schedule-preview,
+.guided-bond-cashflow-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.guided-bond-cashflow-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 0;
+}
+
+.guided-bond-schedule-preview > div,
+.guided-bond-cashflow-summary > div {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  padding: 13px;
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-surface, #f8fafc);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 9px;
+}
+
+.guided-bond-schedule-preview span,
+.guided-bond-cashflow-summary span {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.66rem;
+  font-weight: 650;
+}
+
+.guided-bond-schedule-preview strong,
+.guided-bond-cashflow-summary strong {
+  overflow-wrap: anywhere;
+  color: var(--talkdata-text, #111827);
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-bond-zero {
+  margin-top: 10px;
+  padding: 9px 12px;
+  color: var(--talkdata-danger, #dc2626);
+  background: #fff7f7;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.guided-bond-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.guided-bond-quick-grid button {
+  min-height: 38px;
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-white, #fff);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.guided-bond-result-hero {
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-info, #eff6ff);
+  border: 1px solid var(--talkdata-info-border, #bfdbfe);
+}
+
+.guided-bond-result-hero .guided-eyebrow,
+.guided-bond-result-hero p,
+.guided-bond-result-hero > div > strong small {
+  color: var(--talkdata-muted, #667085);
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-bond-result-hero h3,
+.guided-bond-result-hero > div > strong {
+  color: var(--talkdata-text, #111827);
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-bond-result-hero .guided-result-badge {
+  color: var(--talkdata-danger, #dc2626);
+  background: #fff7f7;
+  border-color: #fecaca;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-bond-value-grid,
+.guided-bond-risk-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.guided-bond-value-grid article,
+.guided-bond-risk-grid article {
+  display: flex;
+  min-width: 0;
+  min-height: 106px;
+  padding: 15px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-white, #fff);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 9px;
+}
+
+.guided-bond-value-grid article.total {
+  grid-column: span 2;
+  background: var(--talkdata-accent-soft, #fff1f1);
+  border-color: #ffd0d0;
+}
+
+.guided-bond-value-grid article > span,
+.guided-bond-risk-grid article > span {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.guided-bond-value-grid article > strong,
+.guided-bond-risk-grid article > strong {
+  overflow-wrap: anywhere;
+  color: var(--talkdata-text, #111827);
+  font-size: clamp(0.94rem, 2.1vw, 1.26rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-bond-value-grid article.total > strong {
+  color: var(--talkdata-danger, #dc2626);
+}
+
+.guided-bond-value-grid article > small,
+.guided-bond-risk-grid article > small {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.63rem;
+  line-height: 1.45;
+}
+
+.guided-bond-checks .guided-assumption-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.guided-bond-shock-table th:first-child,
+.guided-bond-shock-table td:first-child,
+.guided-bond-cashflow-table th:nth-child(2),
+.guided-bond-cashflow-table td:nth-child(2) {
+  text-align: left;
+}
+
+.guided-bond-shock-table tr.base td,
+.guided-bond-shock-table tr.base th {
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-info, #eff6ff);
+  font-weight: 750;
+}
+
+.guided-bond .guided-result-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 760px) {
+  .guided-bond-progress .guided-progress-topline {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .guided-bond-progress .guided-autosave {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .guided-bond-progress .guided-bond-exit {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .guided-bond-value-grid,
+  .guided-bond-risk-grid,
+  .guided-bond-cashflow-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 540px) {
+  .guided-bond .guided-group-tabs,
+  .guided-bond-result > .guided-group-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .guided-bond-scope-grid,
+  .guided-bond-mode-grid,
+  .guided-bond-daycount-grid,
+  .guided-bond-input-grid,
+  .guided-bond-schedule-preview,
+  .guided-bond-cashflow-summary,
+  .guided-bond-value-grid,
+  .guided-bond-risk-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .guided-bond-value-grid article.total {
+    grid-column: auto;
+  }
+
+  .guided-bond-quick-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /* Guided convertible bond calculator */
 
 .guided-cb {

@@ -70,10 +70,11 @@
           purpose:
             "채권의 기준가격과 금리 변화에 따른 가격위험을 구분해 설명하고 검토할 때 사용합니다.",
           methodNote:
-            "쿠폰·원금의 기준가격과 듀레이션·볼록성에 의한 금리변동 가격은 구분해 보여줄 예정입니다.",
+            "정기 고정금리 채권의 Clean·Dirty 가격과 YTM을 계산하고, 듀레이션·볼록성 근사를 정확 재평가와 구분해 보여줍니다.",
           tags: ["수정 듀레이션", "볼록성", "금리충격"],
-          status: "모형 확정",
+          status: "사용 가능",
           tone: "ready",
+          calculator: "bond",
         },
         {
           code: "β+D",
@@ -139,6 +140,7 @@
     "black-scholes": "ValueScannerBlackScholes",
     "monte-carlo": "ValueScannerMonteCarlo",
     "convertible-bond": "ValueScannerConvertibleBond",
+    bond: "ValueScannerBond",
   };
   const totalSteps = featureSteps.length + 1;
   let currentStep = 0;
@@ -179,7 +181,7 @@
       <div>
         <span class="phase3-kicker">PHASE 3 · 소개</span>
         <h2 id="phase3-hub-title" tabindex="-1">고급 가치평가를 하나씩 살펴볼까요?</h2>
-        <p>옵션·복합상품, 금리상품과 M&amp;A는 목적에 따라 필요한 모형이 달라요. 블랙–숄즈, 몬테카를로와 전환사채 계산기는 지금 사용할 수 있고, 나머지 기능은 구현 순서대로 안내할게요.</p>
+        <p>옵션·복합상품, 금리상품과 M&amp;A는 목적에 따라 필요한 모형이 달라요. 블랙–숄즈, 몬테카를로, 전환사채와 채권 계산기는 지금 사용할 수 있고, 나머지 기능은 구현 순서대로 안내할게요.</p>
         <p><strong>진행 순서:</strong> 시장모형 → 금리·복합상품 → M&amp;A 거래</p>
         <div class="step-nav phase3-step-navigation">
           <span></span>
@@ -312,10 +314,10 @@
     if (
       description &&
       description.textContent.trim() !==
-        "블랙–숄즈, 몬테카를로와 전환사채 분석을 사용할 수 있으며 나머지 고급 기능은 순차적으로 구현합니다."
+        "블랙–숄즈, 몬테카를로, 전환사채와 채권 분석을 사용할 수 있으며 나머지 고급 기능은 순차적으로 구현합니다."
     ) {
       description.textContent =
-        "블랙–숄즈, 몬테카를로와 전환사채 분석을 사용할 수 있으며 나머지 고급 기능은 순차적으로 구현합니다.";
+        "블랙–숄즈, 몬테카를로, 전환사채와 채권 분석을 사용할 수 있으며 나머지 고급 기능은 순차적으로 구현합니다.";
     }
   };
 
