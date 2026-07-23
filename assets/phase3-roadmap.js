@@ -31,9 +31,12 @@
             "주가·금리·변동성 경로를 반복 생성해 복잡한 권리와 조건부 지급액의 가치 범위를 분석합니다.",
           purpose:
             "경로 의존 조건이나 조건부 지급처럼 닫힌 해가 어려운 계약의 가치 범위와 불확실성을 추정할 때 사용합니다.",
+          methodNote:
+            "시드가 고정된 위험중립 GBM과 대칭변량으로 유럽형·아시아형·디지털 옵션의 추정가와 95% 신뢰구간을 계산합니다.",
           tags: ["확률 경로", "신뢰구간", "민감도"],
-          status: "공통 엔진 예정",
-          tone: "engine",
+          status: "사용 가능",
+          tone: "ready",
+          calculator: "monte-carlo",
         },
         {
           code: "CB",
@@ -131,6 +134,10 @@
   const featureSteps = featureGroups.flatMap((group) =>
     group.features.map((feature, featureIndex) => ({ group, feature, featureIndex })),
   );
+  const calculatorGlobals = {
+    "black-scholes": "ValueScannerBlackScholes",
+    "monte-carlo": "ValueScannerMonteCarlo",
+  };
   const totalSteps = featureSteps.length + 1;
   let currentStep = 0;
 
@@ -170,7 +177,7 @@
       <div>
         <span class="phase3-kicker">PHASE 3 · 소개</span>
         <h2 id="phase3-hub-title" tabindex="-1">고급 가치평가를 하나씩 살펴볼까요?</h2>
-        <p>옵션·복합상품, 금리상품과 M&amp;A는 목적에 따라 필요한 모형이 달라요. 첫 번째 블랙–숄즈 계산기는 지금 사용할 수 있고, 나머지 기능은 구현 순서대로 안내할게요.</p>
+        <p>옵션·복합상품, 금리상품과 M&amp;A는 목적에 따라 필요한 모형이 달라요. 블랙–숄즈와 몬테카를로 계산기는 지금 사용할 수 있고, 나머지 기능은 구현 순서대로 안내할게요.</p>
         <p><strong>진행 순서:</strong> 시장모형 → 금리·복합상품 → M&amp;A 거래</p>
         <div class="step-nav phase3-step-navigation">
           <span></span>
@@ -303,10 +310,10 @@
     if (
       description &&
       description.textContent.trim() !==
-        "블랙–숄즈 옵션 분석을 사용할 수 있으며 나머지 고급 기능은 순차적으로 구현합니다."
+        "블랙–숄즈와 몬테카를로 분석을 사용할 수 있으며 나머지 고급 기능은 순차적으로 구현합니다."
     ) {
       description.textContent =
-        "블랙–숄즈 옵션 분석을 사용할 수 있으며 나머지 고급 기능은 순차적으로 구현합니다.";
+        "블랙–숄즈와 몬테카를로 분석을 사용할 수 있으며 나머지 고급 기능은 순차적으로 구현합니다.";
     }
   };
 
@@ -332,11 +339,10 @@
     const host = event.currentTarget;
     const launchButton = event.target.closest("[data-phase3-launch]");
     if (launchButton && host.contains(launchButton)) {
-      if (
-        launchButton.dataset.phase3Launch === "black-scholes" &&
-        globalThis.ValueScannerBlackScholes?.mount
-      ) {
-        globalThis.ValueScannerBlackScholes.mount(host, {
+      const calculatorName = calculatorGlobals[launchButton.dataset.phase3Launch];
+      const calculator = calculatorName ? globalThis[calculatorName] : null;
+      if (calculator?.mount) {
+        calculator.mount(host, {
           onExit: () => {
             renderCurrentStep(host);
             const source = host.nextElementSibling;

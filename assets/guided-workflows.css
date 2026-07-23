@@ -760,3 +760,319 @@
     grid-column: auto;
   }
 }
+
+/* Guided Monte Carlo calculator */
+
+.guided-mc {
+  color: var(--talkdata-text, #111827);
+}
+
+.guided-mc-stage {
+  display: flex;
+  width: min(100%, 900px);
+  margin: 0 auto;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.guided-mc-progress {
+  width: min(100%, 900px);
+  margin: 0 auto;
+}
+
+.guided-mc .guided-group-tabs {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.guided-mc-result > .guided-group-tabs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.guided-mc-exit {
+  min-height: 32px;
+  padding: 0 10px;
+  color: var(--talkdata-muted, #667085);
+  background: var(--talkdata-white, #fff);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 7px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.guided-mc-exit:hover,
+.guided-mc-exit:focus-visible {
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-surface, #f8fafc);
+  outline: none;
+}
+
+.guided-mc-section-label {
+  margin: 16px 0 8px;
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+
+.guided-mc-style-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.guided-mc-direction-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.guided-mc-contract-grid,
+.guided-mc-simulation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.guided-mc-simulation-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.guided-mc-contract-grid label,
+.guided-mc-simulation-grid label {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  color: var(--talkdata-text, #111827);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.guided-mc-contract-grid label.wide {
+  grid-column: 1 / -1;
+}
+
+.guided-mc-contract-grid label > span,
+.guided-mc-simulation-grid label > span,
+.guided-mc-fixed-setting > span {
+  min-height: 18px;
+}
+
+.guided-mc-simulation-grid label > small,
+.guided-mc-fixed-setting > small {
+  min-height: 30px;
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.64rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.guided-mc-contract-grid .guided-input-wrap,
+.guided-mc-simulation-grid .guided-input-wrap {
+  min-height: 58px;
+  border-radius: 10px;
+}
+
+.guided-mc-contract-grid .guided-input-wrap input,
+.guided-mc-simulation-grid .guided-input-wrap input {
+  font-size: clamp(1.05rem, 2.6vw, 1.4rem);
+}
+
+.guided-mc-fixed-setting {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 13px;
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-surface, #f8fafc);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 10px;
+  font-size: 0.75rem;
+}
+
+.guided-mc-fixed-setting strong {
+  color: var(--talkdata-danger, #dc2626);
+  font-size: 1.15rem;
+}
+
+.guided-mc-result-hero {
+  background: var(--talkdata-info, #eff6ff);
+  border: 1px solid var(--talkdata-info-border, #bfdbfe);
+}
+
+.guided-mc-summary-grid,
+.guided-mc-distribution-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.guided-mc-summary-grid article,
+.guided-mc-distribution-grid article,
+.guided-mc-greek-grid article {
+  display: flex;
+  min-width: 0;
+  min-height: 112px;
+  padding: 15px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  background: var(--talkdata-white, #fff);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 9px;
+}
+
+.guided-mc-summary-grid article.total {
+  grid-column: span 2;
+  background: var(--talkdata-accent-soft, #fff1f1);
+  border-color: #ffd0d0;
+}
+
+.guided-mc-summary-grid article > span,
+.guided-mc-distribution-grid article > span,
+.guided-mc-greek-grid article > span {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.guided-mc-summary-grid article > strong,
+.guided-mc-distribution-grid article > strong,
+.guided-mc-greek-grid article > strong {
+  overflow-wrap: anywhere;
+  color: var(--talkdata-text, #111827);
+  font-size: clamp(1rem, 2.2vw, 1.35rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-mc-summary-grid article.total > strong {
+  color: var(--talkdata-danger, #dc2626);
+}
+
+.guided-mc-summary-grid article > small,
+.guided-mc-distribution-grid article > small,
+.guided-mc-greek-grid article > small {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.63rem;
+  line-height: 1.45;
+}
+
+.guided-mc-convergence {
+  display: grid;
+  gap: 7px;
+  padding: 14px;
+  background: var(--talkdata-surface, #f8fafc);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 9px;
+}
+
+.guided-mc-convergence h4 {
+  margin: 0 0 4px;
+  color: var(--talkdata-text, #111827);
+  font-size: 0.78rem;
+}
+
+.guided-mc-convergence div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  background: var(--talkdata-white, #fff);
+  border-radius: 7px;
+}
+
+.guided-mc-convergence span {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.7rem;
+}
+
+.guided-mc-convergence strong {
+  color: var(--talkdata-text, #111827);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.guided-mc-greek-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.guided-mc-greek-grid article {
+  min-height: 96px;
+}
+
+.guided-mc-sensitivity h4 {
+  margin: 0 0 10px;
+  color: var(--talkdata-text, #111827);
+  font-size: 0.82rem;
+}
+
+.guided-mc-sensitivity h4 small {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.66rem;
+  font-weight: 500;
+}
+
+.guided-mc-sensitivity th:first-child,
+.guided-mc-sensitivity td:first-child {
+  text-align: left;
+}
+
+.guided-mc-checks .guided-assumption-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.guided-mc .guided-result-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 760px) {
+  .guided-mc-progress .guided-progress-topline {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .guided-mc-progress .guided-autosave {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .guided-mc-progress .guided-mc-exit {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .guided-mc-style-grid,
+  .guided-mc-summary-grid,
+  .guided-mc-distribution-grid,
+  .guided-mc-simulation-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 540px) {
+  .guided-mc .guided-group-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .guided-mc-result > .guided-group-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .guided-mc-style-grid,
+  .guided-mc-direction-grid,
+  .guided-mc-contract-grid,
+  .guided-mc-summary-grid,
+  .guided-mc-distribution-grid,
+  .guided-mc-simulation-grid,
+  .guided-mc-greek-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .guided-mc-summary-grid article.total,
+  .guided-mc-contract-grid label.wide {
+    grid-column: auto;
+  }
+}

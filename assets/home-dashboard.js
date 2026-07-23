@@ -176,9 +176,9 @@
             </button>
             <button type="button" class="home-action-card" data-home-go="phase3">
               <span class="home-action-code amber" aria-hidden="true">P3</span>
-              <span class="home-action-status available">1개 사용 가능</span>
+              <span class="home-action-status available">2개 사용 가능</span>
               <strong>고급 가치평가가 필요해요</strong>
-              <small>블랙–숄즈 유럽형 콜·풋을 계산하고 다음 고급 기능의 구현 순서를 확인해요.</small>
+              <small>블랙–숄즈와 몬테카를로를 계산하고 다음 고급 기능의 구현 순서를 확인해요.</small>
               <b>고급기능 시작 →</b>
             </button>
           </div>
@@ -225,7 +225,7 @@
               <li><span>1</span><div><strong>베타·WACC</strong><small>시장위험과 할인율 근거 정리</small></div></li>
               <li><span>2</span><div><strong>DCF</strong><small>사업계획과 FCFF 연결 검토</small></div></li>
               <li class="planned"><span>3</span><div><strong>멀티플 교차검증</strong><small>Phase 2 구현 예정</small></div></li>
-              <li><span>4</span><div><strong>고급 가치평가</strong><small>블랙–숄즈 사용 가능 · 나머지 순차 구현</small></div></li>
+              <li><span>4</span><div><strong>고급 가치평가</strong><small>블랙–숄즈·몬테카를로 사용 가능</small></div></li>
             </ol>
           </section>
         </div>
@@ -360,6 +360,7 @@
     if (onboardingState.goal === "advanced") {
       const focus = advancedFocusLabels[onboardingState.advancedFocus] || "고급 가치평가";
       const optionsAvailable = onboardingState.advancedFocus === "options";
+      const monteCarloAvailable = onboardingState.advancedFocus === "convertible";
       const preparation = {
         options: ["기초자산 가격과 행사가격", "만기와 변동성", "무위험수익률과 배당수익률"],
         convertible: ["액면·쿠폰·만기", "전환가액과 주가·변동성", "콜·풋·리픽싱 조건", "신용스프레드"],
@@ -373,18 +374,30 @@
         eyebrow: focus,
         title: optionsAvailable
           ? "블랙–숄즈 계산기부터 시작해 보세요"
-          : "Phase 3 로드맵에서 구현 순서를 확인해 보세요",
+          : monteCarloAvailable
+            ? "몬테카를로 시뮬레이션을 먼저 사용할 수 있어요"
+            : "Phase 3 로드맵에서 구현 순서를 확인해 보세요",
         description: optionsAvailable
           ? "유럽형 콜·풋의 이론가, Greeks와 민감도를 한 질문씩 계산할 수 있어요."
-          : "필요한 모형과 입력자료를 확인한 뒤 기능별 구현 순서에 맞춰 준비할 수 있어요.",
+          : monteCarloAvailable
+            ? "유럽형·아시아형·디지털 옵션의 위험중립 경로와 95% 신뢰구간을 계산할 수 있어요."
+            : "필요한 모형과 입력자료를 확인한 뒤 기능별 구현 순서에 맞춰 준비할 수 있어요.",
         route: optionsAvailable
           ? ["고급 가치평가", "블랙–숄즈", "단계별 계산"]
-          : ["고급 가치평가", focus, "구현 예정 확인"],
+          : monteCarloAvailable
+            ? ["고급 가치평가", "몬테카를로", "경로 시뮬레이션"]
+            : ["고급 가치평가", focus, "구현 예정 확인"],
         preparation,
-        action: optionsAvailable ? "블랙–숄즈 계산기로 이동" : "Phase 3 로드맵 보기",
+        action: optionsAvailable
+          ? "블랙–숄즈 계산기로 이동"
+          : monteCarloAvailable
+            ? "몬테카를로로 이동"
+            : "Phase 3 로드맵 보기",
         note: optionsAvailable
-          ? "현재 블랙–숄즈 유럽형 옵션 계산기를 사용할 수 있으며 다른 고급 기능은 순차 구현됩니다."
-          : "블랙–숄즈는 현재 사용 가능하고, 선택한 고급 기능은 순차적으로 구현될 예정입니다.",
+          ? "현재 블랙–숄즈와 몬테카를로 계산기를 사용할 수 있으며 다른 고급 기능은 순차 구현됩니다."
+          : monteCarloAvailable
+            ? "몬테카를로는 사용할 수 있고 전환사채 전용 모형은 다음 순서로 구현됩니다."
+            : "블랙–숄즈와 몬테카를로는 현재 사용 가능하고, 선택한 고급 기능은 순차 구현됩니다.",
       };
     }
 
@@ -506,7 +519,7 @@
                 value: "convertible",
                 code: "CB",
                 title: "전환사채·몬테카를로",
-                description: "전환조건과 주가 경로를 반영한 가치평가",
+                description: "몬테카를로 사용 가능 · 전환사채 모형 순차 구현",
               })}
               ${onboardingChoice({
                 field: "advancedFocus",
