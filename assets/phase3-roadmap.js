@@ -18,10 +18,11 @@
           purpose:
             "단순 유럽형 옵션이나 주식기준보상의 공정가치와 주요 가격 민감도를 설명할 때 사용합니다.",
           methodNote:
-            "바닐라 옵션은 이항모형 대신 블랙–숄즈 모델로 평가할 예정입니다.",
+            "연속 배당수익률을 반영한 블랙–숄즈–머튼 모형으로 유럽형 콜·풋을 평가합니다.",
           tags: ["유럽형 옵션", "콜·풋", "Greeks"],
-          status: "1순위 구현",
-          tone: "priority",
+          status: "사용 가능",
+          tone: "ready",
+          calculator: "black-scholes",
         },
         {
           code: "MC",
@@ -169,7 +170,7 @@
       <div>
         <span class="phase3-kicker">PHASE 3 · 소개</span>
         <h2 id="phase3-hub-title" tabindex="-1">고급 가치평가를 하나씩 살펴볼까요?</h2>
-        <p>옵션·복합상품, 금리상품과 M&amp;A는 목적에 따라 필요한 모형이 달라요. 일곱 기능을 한 번에 펼치지 않고, 어떤 때 쓰는 기능인지부터 차례로 안내할게요.</p>
+        <p>옵션·복합상품, 금리상품과 M&amp;A는 목적에 따라 필요한 모형이 달라요. 첫 번째 블랙–숄즈 계산기는 지금 사용할 수 있고, 나머지 기능은 구현 순서대로 안내할게요.</p>
         <p><strong>진행 순서:</strong> 시장모형 → 금리·복합상품 → M&amp;A 거래</p>
         <div class="step-nav phase3-step-navigation">
           <span></span>
@@ -188,7 +189,7 @@
         <div class="phase3-feature-topline">
           <span class="phase3-code" aria-hidden="true">${escapeHtml(feature.code)}</span>
           <span class="phase3-status ${escapeHtml(feature.tone)}" aria-label="상태: ${escapeHtml(feature.status)}">
-            ◷ ${escapeHtml(feature.status)}
+            ${feature.calculator ? "✓" : "◷"} ${escapeHtml(feature.status)}
           </span>
         </div>
 
@@ -218,7 +219,11 @@
         <div class="phase3-tags" aria-label="포함 기능">
           ${feature.tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}
         </div>
-        <button type="button" disabled aria-disabled="true">Phase 3 · 구현 예정</button>
+        ${
+          feature.calculator
+            ? `<button type="button" class="phase3-launch-button" data-phase3-launch="${escapeHtml(feature.calculator)}">단계별 계산 시작 →</button>`
+            : '<button type="button" disabled aria-disabled="true">Phase 3 · 구현 예정</button>'
+        }
       </article>
     `;
   };
@@ -288,6 +293,8 @@
     const contentArea = source.closest(".content-area");
     const header = contentArea?.previousElementSibling;
     if (!header?.matches("header.main-header")) return;
+    const host = source.previousElementSibling;
+    if (host?.classList.contains("phase3-hub") && host.dataset.phase3Mode) return;
     const title = header.querySelector("h2");
     const description = header.querySelector("p");
     if (title && title.textContent.trim() !== "Phase 3 고급 가치평가") {
@@ -296,10 +303,10 @@
     if (
       description &&
       description.textContent.trim() !==
-        "옵션·복합상품, 채권·파생상품과 M&A 거래 분석 기능을 준비하고 있습니다."
+        "블랙–숄즈 옵션 분석을 사용할 수 있으며 나머지 고급 기능은 순차적으로 구현합니다."
     ) {
       description.textContent =
-        "옵션·복합상품, 채권·파생상품과 M&A 거래 분석 기능을 준비하고 있습니다.";
+        "블랙–숄즈 옵션 분석을 사용할 수 있으며 나머지 고급 기능은 순차적으로 구현합니다.";
     }
   };
 
@@ -322,8 +329,25 @@
   };
 
   const handlePhase3Click = (event) => {
-    const button = event.target.closest("[data-phase3-action]");
     const host = event.currentTarget;
+    const launchButton = event.target.closest("[data-phase3-launch]");
+    if (launchButton && host.contains(launchButton)) {
+      if (
+        launchButton.dataset.phase3Launch === "black-scholes" &&
+        globalThis.ValueScannerBlackScholes?.mount
+      ) {
+        globalThis.ValueScannerBlackScholes.mount(host, {
+          onExit: () => {
+            renderCurrentStep(host);
+            const source = host.nextElementSibling;
+            if (source?.classList.contains("stock-option-container")) updateHeader(source);
+          },
+        });
+      }
+      return;
+    }
+
+    const button = event.target.closest("[data-phase3-action]");
     if (!button || !host.contains(button)) return;
 
     switch (button.dataset.phase3Action) {

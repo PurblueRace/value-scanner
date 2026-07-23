@@ -497,3 +497,266 @@
 .phase3-intro-step .phase3-step-navigation {
   width: 100%;
 }
+
+/* Guided Black–Scholes calculator */
+
+.phase3-feature-card .phase3-launch-button {
+  color: #fff;
+  background: var(--talkdata-accent, #ff4b4b);
+  border-color: var(--talkdata-accent, #ff4b4b);
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.phase3-feature-card .phase3-launch-button:hover,
+.phase3-feature-card .phase3-launch-button:focus-visible {
+  color: #fff;
+  background: var(--talkdata-accent-hover, #e63f3f);
+  border-color: var(--talkdata-accent-hover, #e63f3f);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 75, 75, 0.14);
+}
+
+.guided-bs {
+  color: var(--talkdata-text, #111827);
+}
+
+.guided-bs-stage {
+  display: flex;
+  width: min(100%, 900px);
+  margin: 0 auto;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.guided-bs-progress {
+  width: min(100%, 900px);
+  margin: 0 auto;
+}
+
+.guided-bs .guided-group-tabs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.guided-bs-exit {
+  min-height: 32px;
+  padding: 0 10px;
+  color: var(--talkdata-muted, #667085);
+  background: var(--talkdata-white, #fff);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 7px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.guided-bs-exit:hover,
+.guided-bs-exit:focus-visible {
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-surface, #f8fafc);
+  outline: none;
+}
+
+.guided-bs-type-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.guided-bs-secondary-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 0.75fr);
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--talkdata-border, #e5e7eb);
+}
+
+.guided-bs-secondary-input label {
+  display: grid;
+  gap: 3px;
+  color: var(--talkdata-text, #111827);
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.guided-bs-secondary-input label small {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.guided-bs-secondary-input .guided-input-wrap {
+  min-height: 54px;
+  border-radius: 10px;
+}
+
+.guided-bs-secondary-input .guided-input-wrap input {
+  font-size: 1.25rem;
+}
+
+.guided-bs-scope-note {
+  margin-top: 16px;
+}
+
+.guided-bs-result-hero {
+  background: var(--talkdata-info, #eff6ff);
+  border: 1px solid var(--talkdata-info-border, #bfdbfe);
+}
+
+.guided-bs-value-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.guided-bs-value-grid article,
+.guided-bs-greeks article {
+  display: flex;
+  min-width: 0;
+  min-height: 112px;
+  padding: 15px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  background: var(--talkdata-white, #fff);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 9px;
+}
+
+.guided-bs-value-grid article > span,
+.guided-bs-greeks article > span {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+
+.guided-bs-value-grid article > strong,
+.guided-bs-greeks article > strong {
+  overflow-wrap: anywhere;
+  color: var(--talkdata-text, #111827);
+  font-size: clamp(1.05rem, 2.4vw, 1.45rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-bs-value-grid article > small {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.64rem;
+  line-height: 1.4;
+}
+
+.guided-bs-value-grid .guided-bs-total-value {
+  grid-column: span 2;
+  background: var(--talkdata-accent-soft, #fff1f1);
+  border-color: #ffd0d0;
+}
+
+.guided-bs-value-grid .guided-bs-total-value > strong {
+  color: var(--talkdata-danger, #dc2626);
+}
+
+.guided-bs-equation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 13px;
+  overflow-x: auto;
+  color: var(--talkdata-muted, #667085);
+  background: var(--talkdata-surface, #f8fafc);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 9px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.guided-bs-equation span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.guided-bs-equation strong {
+  color: var(--talkdata-text, #111827);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.guided-bs-greeks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.guided-bs-greeks article p {
+  margin: 0;
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.67rem;
+  line-height: 1.5;
+}
+
+.guided-bs-sensitivity h4 {
+  margin: 0 0 10px;
+  color: var(--talkdata-text, #111827);
+  font-size: 0.82rem;
+}
+
+.guided-bs-sensitivity h4 small {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.66rem;
+  font-weight: 500;
+}
+
+.guided-bs-sensitivity th:first-child,
+.guided-bs-sensitivity td:first-child {
+  text-align: left;
+}
+
+.guided-bs-checks .guided-assumption-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.guided-bs .guided-result-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 720px) {
+  .guided-bs-progress .guided-progress-topline {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .guided-bs-progress .guided-autosave {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .guided-bs-progress .guided-bs-exit {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .guided-bs-secondary-input {
+    grid-template-columns: 1fr;
+  }
+
+  .guided-bs-value-grid,
+  .guided-bs-greeks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .guided-bs-type-grid,
+  .guided-bs-value-grid,
+  .guided-bs-greeks {
+    grid-template-columns: 1fr;
+  }
+
+  .guided-bs-value-grid .guided-bs-total-value {
+    grid-column: auto;
+  }
+}

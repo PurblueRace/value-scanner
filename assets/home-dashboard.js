@@ -176,10 +176,10 @@
             </button>
             <button type="button" class="home-action-card" data-home-go="phase3">
               <span class="home-action-code amber" aria-hidden="true">P3</span>
-              <span class="home-action-status planned">로드맵</span>
+              <span class="home-action-status available">1개 사용 가능</span>
               <strong>고급 가치평가가 필요해요</strong>
-              <small>블랙–숄즈, 전환사채, 채권·스왑과 합병 분석 계획을 확인해요.</small>
-              <b>예정 기능 보기 →</b>
+              <small>블랙–숄즈 유럽형 콜·풋을 계산하고 다음 고급 기능의 구현 순서를 확인해요.</small>
+              <b>고급기능 시작 →</b>
             </button>
           </div>
         </section>
@@ -225,7 +225,7 @@
               <li><span>1</span><div><strong>베타·WACC</strong><small>시장위험과 할인율 근거 정리</small></div></li>
               <li><span>2</span><div><strong>DCF</strong><small>사업계획과 FCFF 연결 검토</small></div></li>
               <li class="planned"><span>3</span><div><strong>멀티플 교차검증</strong><small>Phase 2 구현 예정</small></div></li>
-              <li class="planned"><span>4</span><div><strong>고급 가치평가</strong><small>Phase 3 순차 구현 예정</small></div></li>
+              <li><span>4</span><div><strong>고급 가치평가</strong><small>블랙–숄즈 사용 가능 · 나머지 순차 구현</small></div></li>
             </ol>
           </section>
         </div>
@@ -359,6 +359,7 @@
   const onboardingRecommendation = () => {
     if (onboardingState.goal === "advanced") {
       const focus = advancedFocusLabels[onboardingState.advancedFocus] || "고급 가치평가";
+      const optionsAvailable = onboardingState.advancedFocus === "options";
       const preparation = {
         options: ["기초자산 가격과 행사가격", "만기와 변동성", "무위험수익률과 배당수익률"],
         convertible: ["액면·쿠폰·만기", "전환가액과 주가·변동성", "콜·풋·리픽싱 조건", "신용스프레드"],
@@ -370,12 +371,20 @@
       return {
         destination: "phase3",
         eyebrow: focus,
-        title: "Phase 3 로드맵부터 확인해 보세요",
-        description: "필요한 모형과 입력자료를 확인한 뒤 기능별 구현 순서에 맞춰 준비할 수 있어요.",
-        route: ["고급 가치평가", focus, "구현 예정 확인"],
+        title: optionsAvailable
+          ? "블랙–숄즈 계산기부터 시작해 보세요"
+          : "Phase 3 로드맵에서 구현 순서를 확인해 보세요",
+        description: optionsAvailable
+          ? "유럽형 콜·풋의 이론가, Greeks와 민감도를 한 질문씩 계산할 수 있어요."
+          : "필요한 모형과 입력자료를 확인한 뒤 기능별 구현 순서에 맞춰 준비할 수 있어요.",
+        route: optionsAvailable
+          ? ["고급 가치평가", "블랙–숄즈", "단계별 계산"]
+          : ["고급 가치평가", focus, "구현 예정 확인"],
         preparation,
-        action: "Phase 3 로드맵 보기",
-        note: "현재 고급 기능은 로드맵 단계이며 계산기는 순차적으로 구현될 예정입니다.",
+        action: optionsAvailable ? "블랙–숄즈 계산기로 이동" : "Phase 3 로드맵 보기",
+        note: optionsAvailable
+          ? "현재 블랙–숄즈 유럽형 옵션 계산기를 사용할 수 있으며 다른 고급 기능은 순차 구현됩니다."
+          : "블랙–숄즈는 현재 사용 가능하고, 선택한 고급 기능은 순차적으로 구현될 예정입니다.",
       };
     }
 
@@ -474,7 +483,7 @@
               value: "advanced",
               code: "04",
               title: "금융상품이나 M&A를 평가하고 싶어요",
-              description: "옵션·전환사채·채권·스왑·포트폴리오·합병 기능의 Phase 3 계획을 확인합니다.",
+              description: "블랙–숄즈 계산기를 사용하거나 나머지 고급 기능의 Phase 3 계획을 확인합니다.",
             })}
           </div>
         `;
