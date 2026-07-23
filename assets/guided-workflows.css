@@ -1076,3 +1076,408 @@
     grid-column: auto;
   }
 }
+
+/* Guided convertible bond calculator */
+
+.guided-cb {
+  color: var(--talkdata-text, #111827);
+}
+
+.guided-cb-stage {
+  display: flex;
+  width: min(100%, 920px);
+  margin: 0 auto;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.guided-cb-progress {
+  width: min(100%, 920px);
+  margin: 0 auto;
+}
+
+.guided-cb .guided-group-tabs {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.guided-cb-exit {
+  min-height: 32px;
+  padding: 0 10px;
+  color: var(--talkdata-muted, #667085);
+  background: var(--talkdata-white, #fff);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 7px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.guided-cb-exit:hover,
+.guided-cb-exit:focus-visible {
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-surface, #f8fafc);
+  outline: none;
+}
+
+.guided-cb-scope-grid,
+.guided-cb-conversion-grid,
+.guided-cb-precision-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.guided-cb-basis-grid,
+.guided-cb-input-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.guided-cb-basis-grid label,
+.guided-cb-input-grid label,
+.guided-cb-start {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  color: var(--talkdata-text, #111827);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.guided-cb-input-grid label.wide {
+  grid-column: 1 / -1;
+}
+
+.guided-cb-basis-grid input[type="date"],
+.guided-cb-input-grid select {
+  width: 100%;
+  min-height: 58px;
+  padding: 0 14px;
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-white, #fff);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.guided-cb-basis-grid input[type="date"]:focus,
+.guided-cb-input-grid select:focus {
+  border-color: var(--talkdata-danger, #dc2626);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+  outline: none;
+}
+
+.guided-cb-basis-grid .guided-input-wrap,
+.guided-cb-input-grid .guided-input-wrap,
+.guided-cb-start .guided-input-wrap {
+  min-height: 58px;
+  border-radius: 10px;
+}
+
+.guided-cb-basis-grid .guided-input-wrap input,
+.guided-cb-input-grid .guided-input-wrap input,
+.guided-cb-start .guided-input-wrap input {
+  color: var(--talkdata-text, #111827);
+  font-size: clamp(1.02rem, 2.5vw, 1.35rem);
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-cb-ack {
+  display: grid;
+  width: 100%;
+  margin-top: 12px;
+  padding: 14px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  color: var(--talkdata-text, #111827);
+  text-align: left;
+  background: #fff8e6;
+  border: 1px solid #f5d77a;
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.guided-cb-ack.selected {
+  background: #ecfdf3;
+  border-color: #86d9aa;
+}
+
+.guided-cb-ack > span {
+  color: var(--talkdata-danger, #dc2626);
+  font-weight: 800;
+}
+
+.guided-cb-ack div {
+  display: grid;
+  gap: 4px;
+}
+
+.guided-cb-ack strong {
+  color: var(--talkdata-text, #111827);
+  font-size: 0.78rem;
+}
+
+.guided-cb-ack small {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.66rem;
+  line-height: 1.45;
+}
+
+.guided-cb-ratio-preview,
+.guided-cb-start {
+  margin-top: 12px;
+}
+
+.guided-cb-ratio-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 15px;
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-surface, #f8fafc);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 10px;
+}
+
+.guided-cb-ratio-preview span {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.guided-cb-ratio-preview strong {
+  color: var(--talkdata-text, #111827);
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-cb-model-preview,
+.guided-cb-crr-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.guided-cb-model-preview > div,
+.guided-cb-crr-grid > div {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  padding: 13px;
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-surface, #f8fafc);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 9px;
+}
+
+.guided-cb-model-preview span,
+.guided-cb-crr-grid span {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.66rem;
+  font-weight: 650;
+}
+
+.guided-cb-model-preview strong,
+.guided-cb-crr-grid strong {
+  overflow-wrap: anywhere;
+  color: var(--talkdata-text, #111827);
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-cb-result-hero {
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-info, #eff6ff);
+  border: 1px solid var(--talkdata-info-border, #bfdbfe);
+}
+
+.guided-cb-result-hero .guided-eyebrow,
+.guided-cb-result-hero p,
+.guided-cb-result-hero > div > strong small {
+  color: var(--talkdata-muted, #667085);
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-cb-result-hero h3,
+.guided-cb-result-hero > div > strong {
+  color: var(--talkdata-text, #111827);
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-cb-result-hero .guided-result-badge {
+  color: var(--talkdata-danger, #dc2626);
+  background: #fff7f7;
+  border-color: #fecaca;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-cb-value-grid,
+.guided-cb-bond-grid,
+.guided-cb-option-grid,
+.guided-cb-credit-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.guided-cb-value-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.guided-cb-bond-grid,
+.guided-cb-option-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.guided-cb-credit-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 14px;
+}
+
+.guided-cb-value-grid article,
+.guided-cb-bond-grid article,
+.guided-cb-option-grid article,
+.guided-cb-credit-grid article {
+  display: flex;
+  min-width: 0;
+  min-height: 106px;
+  padding: 15px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-white, #fff);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 9px;
+}
+
+.guided-cb-value-grid article.total {
+  grid-column: span 2;
+  background: var(--talkdata-accent-soft, #fff1f1);
+  border-color: #ffd0d0;
+}
+
+.guided-cb-credit-grid article.base {
+  background: var(--talkdata-info, #eff6ff);
+  border-color: var(--talkdata-info-border, #bfdbfe);
+}
+
+.guided-cb-value-grid article > span,
+.guided-cb-bond-grid article > span,
+.guided-cb-option-grid article > span,
+.guided-cb-credit-grid article > span {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.guided-cb-value-grid article > strong,
+.guided-cb-bond-grid article > strong,
+.guided-cb-option-grid article > strong,
+.guided-cb-credit-grid article > strong {
+  overflow-wrap: anywhere;
+  color: var(--talkdata-text, #111827);
+  font-size: clamp(0.94rem, 2.1vw, 1.26rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-cb-value-grid article.total > strong {
+  color: var(--talkdata-danger, #dc2626);
+}
+
+.guided-cb-value-grid article > small,
+.guided-cb-bond-grid article > small,
+.guided-cb-option-grid article > small,
+.guided-cb-credit-grid article > small {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.63rem;
+  line-height: 1.45;
+}
+
+.guided-cb-sensitivity h4 {
+  margin: 0 0 10px;
+  color: var(--talkdata-text, #111827);
+  font-size: 0.82rem;
+}
+
+.guided-cb-sensitivity h4 small,
+.guided-cb-sensitivity th small {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.65rem;
+  font-weight: 500;
+}
+
+.guided-cb-sensitivity th:first-child,
+.guided-cb-sensitivity td:first-child {
+  text-align: left;
+}
+
+.guided-cb-checks .guided-assumption-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.guided-cb .guided-result-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 760px) {
+  .guided-cb-progress .guided-progress-topline {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .guided-cb-progress .guided-autosave {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .guided-cb-progress .guided-cb-exit {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .guided-cb-value-grid,
+  .guided-cb-bond-grid,
+  .guided-cb-option-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 540px) {
+  .guided-cb .guided-group-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .guided-cb-result > .guided-group-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .guided-cb-scope-grid,
+  .guided-cb-conversion-grid,
+  .guided-cb-precision-grid,
+  .guided-cb-basis-grid,
+  .guided-cb-input-grid,
+  .guided-cb-value-grid,
+  .guided-cb-bond-grid,
+  .guided-cb-option-grid,
+  .guided-cb-credit-grid,
+  .guided-cb-model-preview,
+  .guided-cb-crr-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .guided-cb-value-grid article.total,
+  .guided-cb-input-grid label.wide {
+    grid-column: auto;
+  }
+}

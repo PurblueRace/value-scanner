@@ -176,9 +176,9 @@
             </button>
             <button type="button" class="home-action-card" data-home-go="phase3">
               <span class="home-action-code amber" aria-hidden="true">P3</span>
-              <span class="home-action-status available">2개 사용 가능</span>
+              <span class="home-action-status available">3개 사용 가능</span>
               <strong>고급 가치평가가 필요해요</strong>
-              <small>블랙–숄즈와 몬테카를로를 계산하고 다음 고급 기능의 구현 순서를 확인해요.</small>
+              <small>블랙–숄즈·몬테카를로·전환사채를 계산하고 다음 고급 기능의 구현 순서를 확인해요.</small>
               <b>고급기능 시작 →</b>
             </button>
           </div>
@@ -225,7 +225,7 @@
               <li><span>1</span><div><strong>베타·WACC</strong><small>시장위험과 할인율 근거 정리</small></div></li>
               <li><span>2</span><div><strong>DCF</strong><small>사업계획과 FCFF 연결 검토</small></div></li>
               <li class="planned"><span>3</span><div><strong>멀티플 교차검증</strong><small>Phase 2 구현 예정</small></div></li>
-              <li><span>4</span><div><strong>고급 가치평가</strong><small>블랙–숄즈·몬테카를로 사용 가능</small></div></li>
+              <li><span>4</span><div><strong>고급 가치평가</strong><small>블랙–숄즈·몬테카를로·전환사채 사용 가능</small></div></li>
             </ol>
           </section>
         </div>
@@ -360,7 +360,7 @@
     if (onboardingState.goal === "advanced") {
       const focus = advancedFocusLabels[onboardingState.advancedFocus] || "고급 가치평가";
       const optionsAvailable = onboardingState.advancedFocus === "options";
-      const monteCarloAvailable = onboardingState.advancedFocus === "convertible";
+      const convertibleAvailable = onboardingState.advancedFocus === "convertible";
       const preparation = {
         options: ["기초자산 가격과 행사가격", "만기와 변동성", "무위험수익률과 배당수익률"],
         convertible: ["액면·쿠폰·만기", "전환가액과 주가·변동성", "콜·풋·리픽싱 조건", "신용스프레드"],
@@ -374,30 +374,30 @@
         eyebrow: focus,
         title: optionsAvailable
           ? "블랙–숄즈 계산기부터 시작해 보세요"
-          : monteCarloAvailable
-            ? "몬테카를로 시뮬레이션을 먼저 사용할 수 있어요"
+          : convertibleAvailable
+            ? "전환사채 계산기와 몬테카를로를 사용할 수 있어요"
             : "Phase 3 로드맵에서 구현 순서를 확인해 보세요",
         description: optionsAvailable
           ? "유럽형 콜·풋의 이론가, Greeks와 민감도를 한 질문씩 계산할 수 있어요."
-          : monteCarloAvailable
-            ? "유럽형·아시아형·디지털 옵션의 위험중립 경로와 95% 신뢰구간을 계산할 수 있어요."
+          : convertibleAvailable
+            ? "일반채권과 전환권을 나눈 전환사채 기준가, 그리고 옵션 경로 시뮬레이션을 단계별로 계산할 수 있어요."
             : "필요한 모형과 입력자료를 확인한 뒤 기능별 구현 순서에 맞춰 준비할 수 있어요.",
         route: optionsAvailable
           ? ["고급 가치평가", "블랙–숄즈", "단계별 계산"]
-          : monteCarloAvailable
-            ? ["고급 가치평가", "몬테카를로", "경로 시뮬레이션"]
+          : convertibleAvailable
+            ? ["고급 가치평가", "전환사채", "채권·전환권 분리"]
             : ["고급 가치평가", focus, "구현 예정 확인"],
         preparation,
         action: optionsAvailable
           ? "블랙–숄즈 계산기로 이동"
-          : monteCarloAvailable
-            ? "몬테카를로로 이동"
+          : convertibleAvailable
+            ? "전환사채 계산기로 이동"
             : "Phase 3 로드맵 보기",
         note: optionsAvailable
-          ? "현재 블랙–숄즈와 몬테카를로 계산기를 사용할 수 있으며 다른 고급 기능은 순차 구현됩니다."
-          : monteCarloAvailable
-            ? "몬테카를로는 사용할 수 있고 전환사채 전용 모형은 다음 순서로 구현됩니다."
-            : "블랙–숄즈와 몬테카를로는 현재 사용 가능하고, 선택한 고급 기능은 순차 구현됩니다.",
+          ? "현재 블랙–숄즈, 몬테카를로와 전환사채 계산기를 사용할 수 있으며 다른 고급 기능은 순차 구현됩니다."
+          : convertibleAvailable
+            ? "전환사채와 몬테카를로 계산기를 지금 사용할 수 있습니다. 복잡한 콜·풋·미래 리픽싱은 전환사채 단순모형 범위에서 제외됩니다."
+            : "블랙–숄즈, 몬테카를로와 전환사채는 현재 사용 가능하고, 선택한 고급 기능은 순차 구현됩니다.",
       };
     }
 
@@ -496,7 +496,7 @@
               value: "advanced",
               code: "04",
               title: "금융상품이나 M&A를 평가하고 싶어요",
-              description: "블랙–숄즈 계산기를 사용하거나 나머지 고급 기능의 Phase 3 계획을 확인합니다.",
+              description: "블랙–숄즈·몬테카를로·전환사채 계산기를 사용하거나 나머지 고급 기능의 Phase 3 계획을 확인합니다.",
             })}
           </div>
         `;
@@ -519,7 +519,7 @@
                 value: "convertible",
                 code: "CB",
                 title: "전환사채·몬테카를로",
-                description: "몬테카를로 사용 가능 · 전환사채 모형 순차 구현",
+                description: "전환사채 분리모형과 몬테카를로 모두 사용 가능",
               })}
               ${onboardingChoice({
                 field: "advancedFocus",

@@ -42,14 +42,15 @@
           code: "CB",
           title: "전환사채 가치평가",
           description:
-            "일반채권 가치와 전환권을 나누고 조기상환·콜·풋·리픽싱 조건을 반영합니다.",
+            "일반채권 가치와 고정 전환가 전환권을 나누고, 만기형 또는 기간 중 전환형 가치를 계산합니다.",
           purpose:
             "채권요소와 전환권을 분리해 복합금융상품의 공정가치와 계약조건별 영향을 검토할 때 사용합니다.",
           methodNote:
-            "조기행사와 리픽싱은 블랙–숄즈가 아닌 별도 시뮬레이션 모형으로 설계할 예정입니다.",
-          tags: ["채권 + 전환권", "리픽싱", "조기행사"],
-          status: "고급모형 설계",
-          tone: "design",
+            "고정 신용스프레드 일반채권과 CRR 전환권을 분리합니다. 콜·풋·미래 조건부 리픽싱·부도회수율은 미반영입니다.",
+          tags: ["채권 + 전환권", "CRR", "조기전환"],
+          status: "사용 가능",
+          tone: "ready",
+          calculator: "convertible-bond",
         },
       ],
     },
@@ -137,6 +138,7 @@
   const calculatorGlobals = {
     "black-scholes": "ValueScannerBlackScholes",
     "monte-carlo": "ValueScannerMonteCarlo",
+    "convertible-bond": "ValueScannerConvertibleBond",
   };
   const totalSteps = featureSteps.length + 1;
   let currentStep = 0;
@@ -177,7 +179,7 @@
       <div>
         <span class="phase3-kicker">PHASE 3 · 소개</span>
         <h2 id="phase3-hub-title" tabindex="-1">고급 가치평가를 하나씩 살펴볼까요?</h2>
-        <p>옵션·복합상품, 금리상품과 M&amp;A는 목적에 따라 필요한 모형이 달라요. 블랙–숄즈와 몬테카를로 계산기는 지금 사용할 수 있고, 나머지 기능은 구현 순서대로 안내할게요.</p>
+        <p>옵션·복합상품, 금리상품과 M&amp;A는 목적에 따라 필요한 모형이 달라요. 블랙–숄즈, 몬테카를로와 전환사채 계산기는 지금 사용할 수 있고, 나머지 기능은 구현 순서대로 안내할게요.</p>
         <p><strong>진행 순서:</strong> 시장모형 → 금리·복합상품 → M&amp;A 거래</p>
         <div class="step-nav phase3-step-navigation">
           <span></span>
@@ -310,10 +312,10 @@
     if (
       description &&
       description.textContent.trim() !==
-        "블랙–숄즈와 몬테카를로 분석을 사용할 수 있으며 나머지 고급 기능은 순차적으로 구현합니다."
+        "블랙–숄즈, 몬테카를로와 전환사채 분석을 사용할 수 있으며 나머지 고급 기능은 순차적으로 구현합니다."
     ) {
       description.textContent =
-        "블랙–숄즈와 몬테카를로 분석을 사용할 수 있으며 나머지 고급 기능은 순차적으로 구현합니다.";
+        "블랙–숄즈, 몬테카를로와 전환사채 분석을 사용할 수 있으며 나머지 고급 기능은 순차적으로 구현합니다.";
     }
   };
 
