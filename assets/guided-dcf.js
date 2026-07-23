@@ -62,6 +62,8 @@
     wacc: 10,
     waccMode: null,
     waccSnapshot: null,
+    interestBearingDebt: "",
+    cashAndCashEquivalents: "",
     forecastYears: 5,
     revenue: 1000,
     revenueGrowth: 5,
@@ -107,6 +109,14 @@
         Math.max(Math.trunc(Number(saved.resultPage) || 0), 0),
         resultPanels.length - 1,
       );
+      const requiresCapitalBridgeMigration =
+        merged.step === RESULT_STEP &&
+        (finiteNumber(saved.interestBearingDebt) === null ||
+          finiteNumber(saved.cashAndCashEquivalents) === null);
+      if (requiresCapitalBridgeMigration) {
+        merged.step = TOTAL_QUESTIONS - 1;
+        merged.reviewPage = reviewGroups.length - 1;
+      }
       if (!Object.prototype.hasOwnProperty.call(saved, "waccMode")) {
         // Drafts created before the guided chooser existed used either a snapshot
         // or a manually entered number. Preserve those drafts without making a
@@ -114,6 +124,9 @@
         merged.waccMode = saved.waccSnapshot ? "saved" : "manual";
       } else if (saved.waccMode !== "saved" && saved.waccMode !== "manual") {
         merged.waccMode = null;
+      }
+      if (requiresCapitalBridgeMigration) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
       }
       return merged;
     } catch {
@@ -260,6 +273,22 @@
     const terminalShare = enterpriseValue
       ? (terminalPresentValue / enterpriseValue) * 100
       : 0;
+    const interestBearingDebt = finiteNumber(
+      overrides.interestBearingDebt ?? state.interestBearingDebt,
+    );
+    const cashAndCashEquivalents = finiteNumber(
+      overrides.cashAndCashEquivalents ?? state.cashAndCashEquivalents,
+    );
+    const hasCapitalBridge =
+      interestBearingDebt !== null &&
+      interestBearingDebt >= 0 &&
+      cashAndCashEquivalents !== null &&
+      cashAndCashEquivalents >= 0;
+    const debtValue = hasCapitalBridge ? interestBearingDebt : null;
+    const netDebt = hasCapitalBridge
+      ? interestBearingDebt - cashAndCashEquivalents
+      : null;
+    const equityValue = hasCapitalBridge ? enterpriseValue - netDebt : null;
 
     return {
       cashFlows,
@@ -268,6 +297,11 @@
       terminalPresentValue,
       enterpriseValue,
       terminalShare,
+      interestBearingDebt: debtValue,
+      cashAndCashEquivalents: hasCapitalBridge ? cashAndCashEquivalents : null,
+      debtValue,
+      netDebt,
+      equityValue,
       wacc: waccPercent,
       terminalGrowth: terminalGrowthPercent,
     };
@@ -374,6 +408,22 @@
         else if (number("terminalGrowth") > 5)
           result.warning = "장기 성장률이 높은 편입니다. 명목 GDP 또는 물가 장기전망과 비교해 주세요.";
         break;
+      case 14: {
+        const debt = number("interestBearingDebt");
+        const cash = number("cashAndCashEquivalents");
+        if (debt === null || debt < 0)
+          result.error = "이자부차입금 가치를 0억원 이상으로 입력해 주세요.";
+        else if (cash === null || cash < 0)
+          result.error = "가산할 현금성자산을 0억원 이상으로 입력해 주세요.";
+        else {
+          const bridge = computeDcf();
+          if (bridge?.equityValue < 0)
+            result.warning = "계산된 주주가치가 음수입니다. 부채·현금 금액과 기준일을 다시 확인해 주세요.";
+          else if (cash > debt)
+            result.warning = "순현금 상태입니다. 현금성자산이 주주가치에 가산됩니다.";
+        }
+        break;
+      }
       default:
         break;
     }
@@ -882,6 +932,7 @@
     const group = reviewGroups[page];
     const rows = assumptionGroups()[page];
     const isLastPage = page === reviewGroups.length - 1;
+    const bridgeValidation = validateStep(14);
 
     return `
       <section class="guided-question-card wide" aria-labelledby="guided-question-title">
@@ -917,6 +968,54 @@
         ${
           isLastPage
             ? `
+              <section class="guided-capital-inputs" aria-labelledby="guided-capital-input-title">
+                <div class="guided-capital-input-heading">
+                  <div>
+                    <span>가치 브리지</span>
+                    <h4 id="guided-capital-input-title">영업가치를 주주가치로 연결해 주세요</h4>
+                  </div>
+                  <small>단위: 억원 · 기준일 ${escapeHtml(state.valuationDate)}</small>
+                </div>
+                <div class="guided-capital-input-grid">
+                  <div>
+                    <label class="guided-field-label" for="guided-interest-bearing-debt">이자부차입금 가치</label>
+                    <div class="guided-input-wrap">
+                      <input
+                        id="guided-interest-bearing-debt"
+                        data-field="interestBearingDebt"
+                        type="number"
+                        inputmode="decimal"
+                        value="${escapeHtml(state.interestBearingDebt)}"
+                        min="0"
+                        step="0.1"
+                        placeholder="예: 300"
+                        aria-describedby="guided-capital-input-note"
+                      />
+                      <span>억원</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="guided-field-label" for="guided-cash-equivalents">가산할 현금성자산</label>
+                    <div class="guided-input-wrap">
+                      <input
+                        id="guided-cash-equivalents"
+                        data-field="cashAndCashEquivalents"
+                        type="number"
+                        inputmode="decimal"
+                        value="${escapeHtml(state.cashAndCashEquivalents)}"
+                        min="0"
+                        step="0.1"
+                        placeholder="예: 100"
+                        aria-describedby="guided-capital-input-note"
+                      />
+                      <span>억원</span>
+                    </div>
+                  </div>
+                </div>
+                <p id="guided-capital-input-note" class="guided-capital-input-note">
+                  평가일 현재 시장·공정가치를 사용하고, 확인이 어려우면 장부금액을 근사치로 입력하세요. 현금성자산은 영업에 필요한 최소 현금을 제외한 가산 금액을 입력합니다.
+                </p>
+              </section>
               <div class="guided-readiness">
                 <div>
                   <span>근거 메모</span>
@@ -929,9 +1028,13 @@
               </div>
               <div data-validation>
                 ${
-                  valid
-                    ? '<div class="guided-message success">네 묶음의 검토가 끝났습니다. 이제 계산할 수 있어요.</div>'
-                    : '<div class="guided-message error">일부 가정이 유효하지 않습니다. 표시된 항목을 수정해 주세요.</div>'
+                  valid && bridgeValidation.warning
+                    ? `<div class="guided-message warning">${escapeHtml(bridgeValidation.warning)}</div>`
+                    : valid
+                      ? '<div class="guided-message success">네 묶음의 검토가 끝났습니다. 이제 계산할 수 있어요.</div>'
+                      : bridgeValidation.error
+                        ? `<div class="guided-message error">${escapeHtml(bridgeValidation.error)}</div>`
+                        : '<div class="guided-message error">일부 가정이 유효하지 않습니다. 표시된 항목을 수정해 주세요.</div>'
                 }
               </div>
             `
@@ -954,7 +1057,7 @@
     const growthOffsets = [-0.5, 0, 0.5];
     return `
       <div class="guided-sensitivity">
-        <h4>민감도 분석 <small>(기업가치, 억원)</small></h4>
+        <h4>민감도 분석 <small>(추정 주주가치, 억원)</small></h4>
         <div class="guided-table-wrap">
           <table>
             <thead>
@@ -978,7 +1081,7 @@
                             terminalGrowth: result.terminalGrowth + growthOffset,
                           });
                           return `<td class="${waccOffset === 0 && growthOffset === 0 ? "base" : ""}">${
-                            scenario ? formatNumber(scenario.enterpriseValue) : "-"
+                            scenario ? formatNumber(scenario.equityValue) : "-"
                           }</td>`;
                         })
                         .join("")}
@@ -995,14 +1098,48 @@
 
   const renderResultSummary = (result) => `
     <div class="guided-result-hero">
-      <div>
+      <div class="guided-result-headline">
         <span class="guided-eyebrow">DCF 결과 · 버전 ${escapeHtml(state.lastVersion || 1)}</span>
-        <h3 id="guided-result-title">추정 기업가치</h3>
+        <h3 id="guided-result-title">추정 영업가치 (EV)</h3>
         <strong>${formatNumber(result.enterpriseValue)}<small>억원</small></strong>
-        <p>${escapeHtml(purposeLabel(state.purpose))} · 기준일 ${escapeHtml(state.valuationDate)}</p>
+        <p>FCFF를 WACC로 할인한 사업의 영업가치입니다.</p>
       </div>
-      <div class="guided-result-badge">WACC ${formatPercent(result.wacc)}</div>
+      <div class="guided-result-meta">
+        <div class="guided-result-badge">WACC ${formatPercent(result.wacc)}</div>
+        <small>${escapeHtml(purposeLabel(state.purpose))} · 기준일 ${escapeHtml(state.valuationDate)}</small>
+      </div>
     </div>
+    <section class="guided-capital-split" aria-labelledby="guided-capital-split-title">
+      <div class="guided-capital-split-header">
+        <div>
+          <span>최종 가치 구성</span>
+          <h4 id="guided-capital-split-title">자본가치와 타인자본가치</h4>
+        </div>
+        <small>단위: 억원</small>
+      </div>
+      <div class="guided-capital-values">
+        <article class="equity">
+          <span>추정 주주가치 <small>Equity Value</small></span>
+          <strong>${formatNumber(result.equityValue, 1)}</strong>
+          <em>자본가치</em>
+        </article>
+        <article class="debt">
+          <span>이자부차입금 <small>Debt Value</small></span>
+          <strong>${formatNumber(result.debtValue, 1)}</strong>
+          <em>타인자본가치</em>
+        </article>
+      </div>
+      <div class="guided-capital-equation" aria-label="주주가치 계산식">
+        <span>영업가치 <strong>${formatNumber(result.enterpriseValue, 1)}</strong></span>
+        <b>+</b>
+        <span>가산 현금 <strong>${formatNumber(result.cashAndCashEquivalents, 1)}</strong></span>
+        <b>−</b>
+        <span>이자부차입금 <strong>${formatNumber(result.debtValue, 1)}</strong></span>
+        <b>=</b>
+        <span class="total">주주가치 <strong>${formatNumber(result.equityValue, 1)}</strong></span>
+      </div>
+      <p class="guided-capital-note">입력한 부채가 장부금액이면 주주가치는 근사치입니다. 비영업자산·우선주·비지배지분 등은 별도 조정이 필요합니다.</p>
+    </section>
     <div class="guided-result-grid">
       <article>
         <span>예측기간 현재가치</span>
@@ -1083,6 +1220,8 @@
         <div class="guided-assumption-row"><span>WACC 근거</span><strong>${escapeHtml(state.waccSnapshot?.name || "직접 입력값")}</strong></div>
         <div class="guided-assumption-row"><span>핵심 가정 근거 메모</span><strong>${auditReadiness.completed}/${auditReadiness.total}</strong></div>
         <div class="guided-assumption-row"><span>영구가치 비중</span><strong>${formatNumber(result.terminalShare, 1)}%</strong></div>
+        <div class="guided-assumption-row"><span>추정 주주가치</span><strong>${formatNumber(result.equityValue, 1)}억원</strong></div>
+        <div class="guided-assumption-row"><span>타인자본가치</span><strong>${formatNumber(result.debtValue, 1)}억원</strong></div>
       </div>
       <div class="guided-result-note">
         <strong>감사 검토용 체크</strong>
@@ -1436,6 +1575,10 @@
         assumptions: { ...state, step: 14 },
         result: {
           enterpriseValue: result.enterpriseValue,
+          equityValue: result.equityValue,
+          debtValue: result.debtValue,
+          netDebt: result.netDebt,
+          cashAndCashEquivalents: result.cashAndCashEquivalents,
           forecastPresentValue: result.forecastPresentValue,
           terminalPresentValue: result.terminalPresentValue,
           terminalShare: result.terminalShare,

@@ -1679,6 +1679,197 @@ button.talkdata-command {
   -webkit-text-fill-color: currentColor;
 }
 
+/* DCF result contrast: override the legacy white-on-gradient child rules. */
+.guided-result-hero .guided-eyebrow,
+.guided-result-hero .guided-result-badge {
+  color: var(--talkdata-danger);
+  background: var(--talkdata-accent-soft);
+  border-color: #ffd0d0;
+}
+
+.guided-result-hero h3,
+.guided-result-hero > div > strong {
+  color: var(--talkdata-text);
+  background: none;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-result-hero > div > strong small,
+.guided-result-hero p,
+.guided-result-meta > small {
+  color: #4b5563;
+}
+
+.guided-result-meta {
+  display: flex;
+  max-width: 260px;
+  align-items: flex-end;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 10px;
+  text-align: right;
+}
+
+.guided-result-meta > small {
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.guided-capital-inputs,
+.guided-capital-split {
+  padding: 18px;
+  background: var(--talkdata-white);
+  border: 1px solid var(--talkdata-border);
+  border-radius: 10px;
+}
+
+.guided-capital-input-heading,
+.guided-capital-split-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.guided-capital-input-heading span,
+.guided-capital-split-header span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--talkdata-danger);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.guided-capital-input-heading h4,
+.guided-capital-split-header h4 {
+  margin: 0;
+  color: var(--talkdata-text);
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.guided-capital-input-heading > small,
+.guided-capital-split-header > small {
+  color: var(--talkdata-muted);
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.guided-capital-input-grid,
+.guided-capital-values {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.guided-capital-input-grid .guided-input-wrap {
+  min-height: 60px;
+  background: var(--talkdata-surface);
+  border-color: var(--talkdata-border);
+  border-radius: 9px;
+}
+
+.guided-capital-input-grid .guided-input-wrap input {
+  color: var(--talkdata-text);
+  font-size: clamp(1.3rem, 3vw, 1.7rem);
+}
+
+.guided-capital-input-note,
+.guided-capital-note {
+  margin: 12px 0 0;
+  color: var(--talkdata-muted);
+  font-size: 0.7rem;
+  line-height: 1.55;
+}
+
+.guided-capital-values article {
+  display: grid;
+  min-width: 0;
+  padding: 16px;
+  background: var(--talkdata-surface);
+  border: 1px solid var(--talkdata-border);
+  border-radius: 9px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px 12px;
+}
+
+.guided-capital-values article.equity {
+  background: var(--talkdata-accent-faint);
+  border-color: #ffcaca;
+}
+
+.guided-capital-values article > span {
+  color: var(--talkdata-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  grid-column: 1 / -1;
+}
+
+.guided-capital-values article > span small {
+  margin-left: 4px;
+  color: var(--talkdata-muted);
+  font-weight: 550;
+}
+
+.guided-capital-values article > strong {
+  align-self: end;
+  color: var(--talkdata-text);
+  font-size: clamp(1.65rem, 4vw, 2.2rem);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-capital-values article > em {
+  align-self: end;
+  padding: 4px 7px;
+  color: var(--talkdata-danger);
+  background: var(--talkdata-white);
+  border: 1px solid #ffd0d0;
+  border-radius: 999px;
+  font-size: 0.64rem;
+  font-style: normal;
+  font-weight: 750;
+}
+
+.guided-capital-equation {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+  padding: 11px 13px;
+  overflow-x: auto;
+  color: var(--talkdata-muted);
+  background: var(--talkdata-info);
+  border: 1px solid var(--talkdata-info-border);
+  border-radius: 9px;
+  gap: 9px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.guided-capital-equation span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.guided-capital-equation strong {
+  color: var(--talkdata-text);
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-capital-equation b {
+  color: var(--talkdata-danger);
+}
+
+.guided-capital-equation .total {
+  color: var(--talkdata-danger);
+  font-weight: 750;
+}
+
 .formula-box,
 .formula-display,
 .calc-formula,
@@ -1942,6 +2133,23 @@ button.talkdata-command {
 
   .content-area {
     padding: 7px 16px 26px;
+  }
+
+  .guided-result-meta {
+    max-width: none;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .guided-capital-input-heading,
+  .guided-capital-split-header {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .guided-capital-input-grid,
+  .guided-capital-values {
+    grid-template-columns: 1fr;
   }
 }
 
