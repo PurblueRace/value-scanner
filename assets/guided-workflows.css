@@ -1077,6 +1077,389 @@
   }
 }
 
+/* Guided interest-rate swap calculator */
+
+.guided-irs {
+  color: var(--talkdata-text, #111827);
+}
+
+.guided-irs-stage,
+.guided-irs-progress {
+  width: min(100%, 980px);
+  margin: 0 auto;
+}
+
+.guided-irs-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.guided-irs .guided-group-tabs {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.guided-irs-result > .guided-group-tabs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.guided-irs-exit {
+  min-height: 32px;
+  padding: 0 10px;
+  color: var(--talkdata-muted, #667085);
+  background: var(--talkdata-white, #fff);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 7px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.guided-irs-exit:hover,
+.guided-irs-exit:focus-visible {
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-surface, #f8fafc);
+  outline: none;
+}
+
+.guided-irs-scope-grid,
+.guided-irs-direction-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.guided-irs-curve-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.guided-irs .guided-input-grid,
+.guided-irs-rate-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.guided-irs-basis-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.guided-irs-terms-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.guided-irs-flat-grid,
+.guided-irs-risk-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.guided-irs-rate-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.guided-irs .guided-input-grid label,
+.guided-irs-rate-grid label {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  color: var(--talkdata-text, #111827);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.guided-irs .guided-input-grid input[type="date"],
+.guided-irs .guided-input-grid select {
+  width: 100%;
+  min-height: 56px;
+  padding: 0 13px;
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-white, #fff);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.94rem;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-irs .guided-input-suffix {
+  display: grid;
+  min-height: 56px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-white, #fff);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.guided-irs .guided-input-suffix:focus-within,
+.guided-irs .guided-input-grid input[type="date"]:focus,
+.guided-irs .guided-input-grid select:focus {
+  border-color: var(--talkdata-danger, #dc2626);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+  outline: none;
+}
+
+.guided-irs .guided-input-suffix input {
+  width: 100%;
+  min-width: 0;
+  min-height: 54px;
+  padding: 0 12px;
+  color: var(--talkdata-text, #111827);
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font: inherit;
+  font-size: clamp(0.94rem, 2.2vw, 1.16rem);
+  font-variant-numeric: tabular-nums;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-irs .guided-input-suffix span {
+  padding: 0 12px;
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.guided-irs-period-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 13px 15px;
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-surface, #f8fafc);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 10px;
+}
+
+.guided-irs-period-preview span,
+.guided-irs-period-preview small {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.66rem;
+}
+
+.guided-irs-period-preview strong {
+  color: var(--talkdata-text, #111827);
+  font-size: 0.96rem;
+  font-variant-numeric: tabular-nums;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-irs-scenario-preview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.guided-irs-scenario-preview article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px;
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-surface, #f8fafc);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 9px;
+}
+
+.guided-irs-scenario-preview span {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.67rem;
+}
+
+.guided-irs-scenario-preview strong {
+  color: var(--talkdata-text, #111827);
+  font-size: 0.82rem;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-irs-result-hero {
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-info, #eff6ff);
+  border: 1px solid var(--talkdata-info-border, #bfdbfe);
+}
+
+.guided-irs-result-hero .guided-eyebrow,
+.guided-irs-result-hero p,
+.guided-irs-result-hero > div > strong small {
+  color: var(--talkdata-muted, #667085);
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-irs-result-hero h3,
+.guided-irs-result-hero > div > strong {
+  color: var(--talkdata-text, #111827);
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-irs-result-hero .guided-result-badge {
+  color: var(--talkdata-danger, #dc2626);
+  background: #fff7f7;
+  border-color: #fecaca;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-irs-summary-grid,
+.guided-irs-leg-grid,
+.guided-irs-scenario-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.guided-irs-summary-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.guided-irs-leg-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.guided-irs-scenario-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.guided-irs-summary-grid article,
+.guided-irs-leg-grid article,
+.guided-irs-scenario-grid article {
+  display: flex;
+  min-width: 0;
+  min-height: 108px;
+  padding: 15px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  color: var(--talkdata-text, #111827);
+  background: var(--talkdata-white, #fff);
+  border: 1px solid var(--talkdata-border, #e5e7eb);
+  border-radius: 9px;
+}
+
+.guided-irs-summary-grid article.total {
+  grid-column: span 2;
+  background: var(--talkdata-accent-soft, #fff1f1);
+  border-color: #ffd0d0;
+}
+
+.guided-irs-scenario-grid article.base {
+  background: var(--talkdata-info, #eff6ff);
+  border-color: var(--talkdata-info-border, #bfdbfe);
+}
+
+.guided-irs-summary-grid span,
+.guided-irs-leg-grid span,
+.guided-irs-scenario-grid span,
+.guided-irs-summary-grid small,
+.guided-irs-leg-grid small,
+.guided-irs-scenario-grid small,
+.guided-irs-scenario-grid em {
+  color: var(--talkdata-muted, #667085);
+  font-size: 0.64rem;
+  font-style: normal;
+  line-height: 1.4;
+}
+
+.guided-irs-summary-grid strong,
+.guided-irs-leg-grid strong,
+.guided-irs-scenario-grid strong {
+  overflow-wrap: anywhere;
+  color: var(--talkdata-text, #111827);
+  font-size: clamp(0.94rem, 2vw, 1.22rem);
+  font-variant-numeric: tabular-nums;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guided-irs-summary-grid article.total > strong {
+  color: var(--talkdata-danger, #dc2626);
+}
+
+.guided-irs-cashflow-table th:first-child,
+.guided-irs-cashflow-table td:first-child {
+  text-align: left;
+}
+
+.guided-irs-cashflow-table .positive {
+  color: #067647;
+}
+
+.guided-irs-cashflow-table .negative {
+  color: var(--talkdata-danger, #dc2626);
+}
+
+.guided-irs-checks .guided-assumption-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.guided-irs .guided-result-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 800px) {
+  .guided-irs-rate-grid,
+  .guided-irs-leg-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .guided-irs-progress .guided-progress-topline {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .guided-irs-progress .guided-autosave {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .guided-irs-progress .guided-irs-exit {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .guided-irs-terms-grid,
+  .guided-irs-summary-grid,
+  .guided-irs-scenario-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 540px) {
+  .guided-irs .guided-group-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .guided-irs-result > .guided-group-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .guided-irs-scope-grid,
+  .guided-irs-direction-grid,
+  .guided-irs-curve-grid,
+  .guided-irs-basis-grid,
+  .guided-irs-terms-grid,
+  .guided-irs-rate-grid,
+  .guided-irs-scenario-preview,
+  .guided-irs-summary-grid,
+  .guided-irs-leg-grid,
+  .guided-irs-scenario-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .guided-irs-summary-grid article.total {
+    grid-column: auto;
+  }
+
+  .guided-irs-period-preview {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
 /* Guided portfolio market and rate risk calculator */
 
 .guided-pr {

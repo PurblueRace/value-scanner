@@ -97,9 +97,12 @@
             "고정·변동 레그의 현재가치를 비교해 이자율스왑의 순가치와 공정고정금리를 계산합니다.",
           purpose:
             "고정·변동 현금흐름을 비교해 스왑의 순가치, 공정고정금리와 금리 민감도를 검토할 때 사용합니다.",
+          methodNote:
+            "신규 또는 리셋 직후의 표준 단일통화 IRS를 단일 곡선으로 평가하며, 평탄·스폿·포워드 곡선과 평행이동 DV01을 지원합니다.",
           tags: ["이자율스왑", "고정·변동 레그", "DV01"],
-          status: "커브 설계",
-          tone: "design",
+          status: "사용 가능",
+          tone: "ready",
+          calculator: "interest-rate-swap",
         },
       ],
     },
@@ -143,6 +146,7 @@
     "convertible-bond": "ValueScannerConvertibleBond",
     bond: "ValueScannerBond",
     "portfolio-risk": "ValueScannerPortfolioRisk",
+    "interest-rate-swap": "ValueScannerInterestRateSwap",
   };
   const totalSteps = featureSteps.length + 1;
   let currentStep = 0;
@@ -183,7 +187,7 @@
       <div>
         <span class="phase3-kicker">PHASE 3 · 소개</span>
         <h2 id="phase3-hub-title" tabindex="-1">고급 가치평가를 하나씩 살펴볼까요?</h2>
-        <p>옵션·복합상품, 금리상품과 M&amp;A는 목적에 따라 필요한 모형이 달라요. 옵션·전환사채·채권·포트폴리오 위험 계산기는 지금 사용할 수 있고, 나머지 기능은 구현 순서대로 안내할게요.</p>
+        <p>옵션·복합상품, 금리상품과 M&amp;A는 목적에 따라 필요한 모형이 달라요. 옵션·전환사채·채권·포트폴리오 위험·스왑 계산기는 지금 사용할 수 있고, M&amp;A 기능을 마지막으로 준비하고 있어요.</p>
         <p><strong>진행 순서:</strong> 시장모형 → 금리·복합상품 → M&amp;A 거래</p>
         <div class="step-nav phase3-step-navigation">
           <span></span>
@@ -316,10 +320,10 @@
     if (
       description &&
       description.textContent.trim() !==
-        "옵션·전환사채·채권·포트폴리오 위험 분석을 사용할 수 있으며 나머지 고급 기능은 순차적으로 구현합니다."
+        "옵션·전환사채·채권·포트폴리오 위험·스왑 분석을 사용할 수 있으며 M&A 기능을 마지막으로 준비하고 있습니다."
     ) {
       description.textContent =
-        "옵션·전환사채·채권·포트폴리오 위험 분석을 사용할 수 있으며 나머지 고급 기능은 순차적으로 구현합니다.";
+        "옵션·전환사채·채권·포트폴리오 위험·스왑 분석을 사용할 수 있으며 M&A 기능을 마지막으로 준비하고 있습니다.";
     }
   };
 

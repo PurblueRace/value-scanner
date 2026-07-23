@@ -176,9 +176,9 @@
             </button>
             <button type="button" class="home-action-card" data-home-go="phase3">
               <span class="home-action-code amber" aria-hidden="true">P3</span>
-              <span class="home-action-status available">5개 사용 가능</span>
+              <span class="home-action-status available">6개 사용 가능</span>
               <strong>고급 가치평가가 필요해요</strong>
-              <small>옵션·전환사채·채권·포트폴리오 위험을 계산하고 다음 기능의 순서를 확인해요.</small>
+              <small>옵션·전환사채·채권·포트폴리오·스왑을 계산하고 M&amp;A 준비상태를 확인해요.</small>
               <b>고급기능 시작 →</b>
             </button>
           </div>
@@ -225,7 +225,7 @@
               <li><span>1</span><div><strong>베타·WACC</strong><small>시장위험과 할인율 근거 정리</small></div></li>
               <li><span>2</span><div><strong>DCF</strong><small>사업계획과 FCFF 연결 검토</small></div></li>
               <li class="planned"><span>3</span><div><strong>멀티플 교차검증</strong><small>Phase 2 구현 예정</small></div></li>
-              <li><span>4</span><div><strong>고급 가치평가</strong><small>옵션·채권·포트폴리오 위험 5개 계산기 사용 가능</small></div></li>
+              <li><span>4</span><div><strong>고급 가치평가</strong><small>옵션·복합상품·금리위험 6개 계산기 사용 가능</small></div></li>
             </ol>
           </section>
         </div>
@@ -363,6 +363,7 @@
       const convertibleAvailable = onboardingState.advancedFocus === "convertible";
       const bondAvailable = onboardingState.advancedFocus === "bond";
       const portfolioAvailable = onboardingState.advancedFocus === "portfolio";
+      const swapAvailable = onboardingState.advancedFocus === "swap";
       const preparation = {
         options: ["기초자산 가격과 행사가격", "만기와 변동성", "무위험수익률과 배당수익률"],
         convertible: ["액면·쿠폰·만기", "전환가액과 주가·변동성", "콜·풋·리픽싱 조건", "신용스프레드"],
@@ -382,6 +383,8 @@
               ? "채권 가격과 YTM·금리위험을 계산해 보세요"
               : portfolioAvailable
                 ? "시장베타와 금리위험 장부를 따로 점검해 보세요"
+                : swapAvailable
+                  ? "이자율스왑의 두 레그와 순가치를 계산해 보세요"
             : "Phase 3 로드맵에서 구현 순서를 확인해 보세요",
         description: optionsAvailable
           ? "유럽형 콜·풋의 이론가, Greeks와 민감도를 한 질문씩 계산할 수 있어요."
@@ -391,6 +394,8 @@
               ? "Clean·Dirty 가격, YTM 역산, 듀레이션·볼록성·DV01과 금리충격을 한 질문씩 계산할 수 있어요."
               : portfolioAvailable
                 ? "시장가치 가중 베타와 포트폴리오 듀레이션·DV01을 두 장부로 나눠 계산할 수 있어요."
+                : swapAvailable
+                  ? "고정·변동 레그 현재가치, 공정고정금리, DV01과 평행 금리 시나리오를 계산할 수 있어요."
             : "필요한 모형과 입력자료를 확인한 뒤 기능별 구현 순서에 맞춰 준비할 수 있어요.",
         route: optionsAvailable
           ? ["고급 가치평가", "블랙–숄즈", "단계별 계산"]
@@ -400,6 +405,8 @@
               ? ["고급 가치평가", "채권 가격·금리위험", "단계별 계산"]
               : portfolioAvailable
                 ? ["고급 가치평가", "포트폴리오 위험", "시장·금리 장부 분리"]
+                : swapAvailable
+                  ? ["고급 가치평가", "이자율스왑", "레그·순가치 분석"]
             : ["고급 가치평가", focus, "구현 예정 확인"],
         preparation,
         action: optionsAvailable
@@ -410,6 +417,8 @@
               ? "채권 계산기로 이동"
               : portfolioAvailable
                 ? "포트폴리오 위험 계산기로 이동"
+                : swapAvailable
+                  ? "이자율스왑 계산기로 이동"
             : "Phase 3 로드맵 보기",
         note: optionsAvailable
           ? "현재 블랙–숄즈, 몬테카를로와 전환사채 계산기를 사용할 수 있으며 다른 고급 기능은 순차 구현됩니다."
@@ -419,7 +428,9 @@
               ? "정규 고정금리·무이표 채권을 지원합니다. 콜·풋·변동금리·비정규 쿠폰은 별도 모형이 필요합니다."
               : portfolioAvailable
                 ? "시장위험과 금리위험은 서로 다른 장부와 충격을 사용하므로 결과를 합산하지 않습니다."
-                : "옵션·전환사채·채권·포트폴리오 위험 계산기는 현재 사용 가능하고, 선택한 고급 기능은 순차 구현됩니다.",
+                : swapAvailable
+                  ? "신규 또는 변동금리 리셋 직후의 표준 단일통화 스왑을 단일 곡선으로 평가합니다."
+                  : "옵션·전환사채·채권·포트폴리오 위험·스왑 계산기는 현재 사용 가능하며 M&A 기능을 준비하고 있습니다.",
       };
     }
 
@@ -518,7 +529,7 @@
               value: "advanced",
               code: "04",
               title: "금융상품이나 M&A를 평가하고 싶어요",
-              description: "옵션·전환사채·채권·포트폴리오 위험 계산기를 사용하거나 다음 기능 계획을 확인합니다.",
+              description: "옵션·복합상품·금리위험 계산기를 사용하거나 M&A 기능 계획을 확인합니다.",
             })}
           </div>
         `;
@@ -555,7 +566,7 @@
                 value: "swap",
                 code: "IRS",
                 title: "스왑계약",
-                description: "이자율스왑 등 계약의 공정가치",
+                description: "고정·변동 레그, 공정고정금리와 DV01 사용 가능",
               })}
               ${onboardingChoice({
                 field: "advancedFocus",
