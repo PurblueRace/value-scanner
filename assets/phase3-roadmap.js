@@ -84,10 +84,11 @@
           purpose:
             "여러 자산으로 구성된 포트폴리오의 시장위험과 금리위험을 따로 측정하고 목표 위험수준에 맞춘 조정 방향을 검토할 때 사용합니다.",
           methodNote:
-            "베타는 시장가치 가중 위험으로, 듀레이션은 현금흐름 시점에 따른 금리 민감도로 나누어 보여줄 예정입니다.",
+            "베타 장부와 듀레이션 장부의 가중 위험·충격손익을 독립 계산하며, 서로 다른 두 시나리오를 합산하지 않습니다.",
           tags: ["시장가치 가중 베타", "포트폴리오 듀레이션", "충격 시나리오"],
-          status: "위험모형 설계",
-          tone: "design",
+          status: "사용 가능",
+          tone: "ready",
+          calculator: "portfolio-risk",
         },
         {
           code: "IRS",
@@ -141,6 +142,7 @@
     "monte-carlo": "ValueScannerMonteCarlo",
     "convertible-bond": "ValueScannerConvertibleBond",
     bond: "ValueScannerBond",
+    "portfolio-risk": "ValueScannerPortfolioRisk",
   };
   const totalSteps = featureSteps.length + 1;
   let currentStep = 0;
@@ -181,7 +183,7 @@
       <div>
         <span class="phase3-kicker">PHASE 3 · 소개</span>
         <h2 id="phase3-hub-title" tabindex="-1">고급 가치평가를 하나씩 살펴볼까요?</h2>
-        <p>옵션·복합상품, 금리상품과 M&amp;A는 목적에 따라 필요한 모형이 달라요. 블랙–숄즈, 몬테카를로, 전환사채와 채권 계산기는 지금 사용할 수 있고, 나머지 기능은 구현 순서대로 안내할게요.</p>
+        <p>옵션·복합상품, 금리상품과 M&amp;A는 목적에 따라 필요한 모형이 달라요. 옵션·전환사채·채권·포트폴리오 위험 계산기는 지금 사용할 수 있고, 나머지 기능은 구현 순서대로 안내할게요.</p>
         <p><strong>진행 순서:</strong> 시장모형 → 금리·복합상품 → M&amp;A 거래</p>
         <div class="step-nav phase3-step-navigation">
           <span></span>
@@ -314,10 +316,10 @@
     if (
       description &&
       description.textContent.trim() !==
-        "블랙–숄즈, 몬테카를로, 전환사채와 채권 분석을 사용할 수 있으며 나머지 고급 기능은 순차적으로 구현합니다."
+        "옵션·전환사채·채권·포트폴리오 위험 분석을 사용할 수 있으며 나머지 고급 기능은 순차적으로 구현합니다."
     ) {
       description.textContent =
-        "블랙–숄즈, 몬테카를로, 전환사채와 채권 분석을 사용할 수 있으며 나머지 고급 기능은 순차적으로 구현합니다.";
+        "옵션·전환사채·채권·포트폴리오 위험 분석을 사용할 수 있으며 나머지 고급 기능은 순차적으로 구현합니다.";
     }
   };
 
